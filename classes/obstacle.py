@@ -10,6 +10,8 @@ class Obstacle:
     self.is_not_in_ROI = is_not_in_ROI
     self.size = 0
 
+    self.set_position_and_size()
+
     if name in URGENT_OBSTACLE_SET:
       self.hazard_order = 0
     elif name == 'person':
@@ -20,6 +22,9 @@ class Obstacle:
       self.hazard_order = 2
     else:
       self.hazard_order = 2
+
+  def set_position_and_size(self):
+    pass
 
   def __str__(self):
     return self.name + " detected"

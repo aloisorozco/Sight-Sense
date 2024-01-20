@@ -8,6 +8,8 @@ results = model.predict(source="0", show=True)
 
 print(results)'''
 
+import time
+
 import cv2
 import argparse
 
@@ -72,6 +74,8 @@ def main():
         text_scale=2
     )
 
+    timed_out = 0
+
     while True:
 
         ret, frame = cap.read()
@@ -101,7 +105,12 @@ def main():
         print('idk2')'''
 
         #print(process_objects_to_alerts(filter_objects(obstacles, OBSTACLE_SET), URGENT_OBSTACLE_SET, "vehicles"))
-        print(sort_and_trim_objects(filter_objects(obstacles, OBSTACLE_SET)))
+        
+        obstacles = sort_and_trim_objects(filter_objects(obstacles, OBSTACLE_SET))
+
+        if len(obstacles) > 0 and time.time() > timed_out:
+            print(obstacles)
+            timed_out = time.time() + 5
 
         zone.trigger(detections=detections)
         frame = zone_annotator.annotate(scene=frame)      

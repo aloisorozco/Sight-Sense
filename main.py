@@ -17,6 +17,9 @@ import numpy as np
 
 from filter import filter_objects
 
+#cell phone is here just for testing purposes
+OBSTACLES = {"person", "car", "bicycle", "bus", "train", "truck", "bench", "chair", "cell phone"}
+
 min_bound = 0.25
 max_bound = 1
 
@@ -83,7 +86,7 @@ def main():
             labels=labels
         )
 
-        filter_objects(labels)
+        filter_objects(labels, OBSTACLES)
 
         zone.trigger(detections=detections)
         frame = zone_annotator.annotate(scene=frame)      

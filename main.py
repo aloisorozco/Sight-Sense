@@ -15,8 +15,16 @@ from ultralytics import YOLO
 import supervision as sv
 import numpy as np
 
+from filter import filter_objects, Obstacle
+from notify import sort_and_trim_objects
+
+#cell phone and bottle are here just for testing purposes
+OBSTACLE_SET = {"person", "car", "bicycle", "bus", "train", "truck", "bench", "chair", "cell phone", "bottle"}
+
+URGENT_OBSTACLE_SET = {"car", "bicycle", "bus", "train", "truck", "cell phone"}
+
 min_bound = 0.25
-max_bound = 0.75
+max_bound = 1
 
 ZONE_POLYGON = np.array([
     [min_bound, min_bound],
@@ -65,6 +73,7 @@ def main():
     )
 
     while True:
+
         ret, frame = cap.read()
 
         result = model(frame, agnostic_nms=True)[0]
@@ -74,18 +83,33 @@ def main():
             for _, confidence, class_id, _
             in detections
         ]
+
+        obstacles = [
+            Obstacle(model.model.names[class_id], confidence, xyxy)
+            for xyxy, confidence, class_id, _
+            in detections
+        ]
+
         frame = box_annotator.annotate(
             scene=frame, 
             detections=detections, 
             labels=labels
         )
 
+        '''print('idk')
+        print(detections)
+        print('idk2')'''
+
+        #print(process_objects_to_alerts(filter_objects(obstacles, OBSTACLE_SET), URGENT_OBSTACLE_SET, "vehicles"))
+        print(sort_and_trim_objects(filter_objects(obstacles, OBSTACLE_SET)))
+
         zone.trigger(detections=detections)
         frame = zone_annotator.annotate(scene=frame)      
         
         cv2.imshow("yolov8", frame)
 
-        '''print("idk: ")
+        '''#see which objects model was trained on
+        print("idk")
         print(result)
         print("ikd2")'''
 

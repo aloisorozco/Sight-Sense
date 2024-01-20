@@ -15,6 +15,8 @@ from ultralytics import YOLO
 import supervision as sv
 import numpy as np
 
+from filter import filter_objects, Obstacle
+
 min_bound = 0.25
 max_bound = 0.75
 
@@ -80,12 +82,20 @@ def main():
             labels=labels
         )
 
+        #print('idk')
+        #print(labels)
+        #print(type(labels[0]))
+        #print('idk2')
+
+        filter_objects(labels)
+
         zone.trigger(detections=detections)
         frame = zone_annotator.annotate(scene=frame)      
         
         cv2.imshow("yolov8", frame)
 
-        '''print("idk: ")
+        #see which objects model was trained on
+        '''print("idk")
         print(result)
         print("ikd2")'''
 

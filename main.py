@@ -16,9 +16,12 @@ import supervision as sv
 import numpy as np
 
 from filter import filter_objects, Obstacle
+from notify import process_objects_to_alerts
 
 #cell phone is here just for testing purposes
 OBSTACLE_SET = {"person", "car", "bicycle", "bus", "train", "truck", "bench", "chair", "cell phone"}
+
+URGENT_OBSTACLE_SET = {"car", "bicycle", "bus", "train", "truck", "cell phone"}
 
 min_bound = 0.25
 max_bound = 1
@@ -96,7 +99,7 @@ def main():
         print(detections)
         print('idk2')'''
 
-        filter_objects(obstacles, OBSTACLE_SET)
+        print(process_objects_to_alerts(filter_objects(obstacles, OBSTACLE_SET), URGENT_OBSTACLE_SET, "vehicles"))
 
         zone.trigger(detections=detections)
         frame = zone_annotator.annotate(scene=frame)      

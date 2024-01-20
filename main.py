@@ -25,7 +25,7 @@ OBSTACLE_SET = {"person", "car", "bicycle", "bus", "train", "truck", "bench", "c
 
 URGENT_OBSTACLE_SET = {"car", "bicycle", "bus", "train", "truck", "cell phone"}
 
-min_bound = 0.25
+min_bound = 0.5
 max_bound = 1
 
 ZONE_POLYGON = np.array([
@@ -74,6 +74,8 @@ def main():
         text_scale=2
     )
 
+    print(zone_polygon)
+
     timed_out = 0
 
     while True:
@@ -89,7 +91,7 @@ def main():
         ]
 
         obstacles = [
-            Obstacle(model.model.names[class_id], confidence, xyxy)
+            Obstacle(model.model.names[class_id], confidence, xyxy, zone_polygon)
             for xyxy, confidence, class_id, _
             in detections
         ]
@@ -99,18 +101,14 @@ def main():
             detections=detections, 
             labels=labels
         )
-
-        '''print('idk')
-        print(detections)
-        print('idk2')'''
-
-        #print(process_objects_to_alerts(filter_objects(obstacles, OBSTACLE_SET), URGENT_OBSTACLE_SET, "vehicles"))
         
         obstacles = sort_and_trim_objects(filter_objects(obstacles, OBSTACLE_SET))
 
-        if len(obstacles) > 0 and time.time() > timed_out:
+        print(obstacles)
+
+        '''if len(obstacles) > 0 and time.time() > timed_out:
             print(obstacles)
-            timed_out = time.time() + 5
+            timed_out = time.time() + 5'''
 
         zone.trigger(detections=detections)
         frame = zone_annotator.annotate(scene=frame)      

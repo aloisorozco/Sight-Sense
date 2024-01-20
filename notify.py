@@ -1,4 +1,5 @@
 from classes.obstacle import Obstacle
+from classes.alert import Alert
 
 URGENT_OBSTACLES = {"car", "bicycle", "bus", "train", "truck"}
 

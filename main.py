@@ -15,10 +15,10 @@ from ultralytics import YOLO
 import supervision as sv
 import numpy as np
 
-from filter import filter_objects
+from filter import filter_objects, Obstacle
 
 #cell phone is here just for testing purposes
-OBSTACLES = {"person", "car", "bicycle", "bus", "train", "truck", "bench", "chair", "cell phone"}
+OBSTACLE_SET = {"person", "car", "bicycle", "bus", "train", "truck", "bench", "chair", "cell phone"}
 
 min_bound = 0.25
 max_bound = 1
@@ -80,13 +80,23 @@ def main():
             in detections
         ]
 
+        obstacles = [
+            Obstacle(model.model.names[class_id], confidence, xyxy)
+            for xyxy, confidence, class_id, _
+            in detections
+        ]
+
         frame = box_annotator.annotate(
             scene=frame, 
             detections=detections, 
             labels=labels
         )
 
-        filter_objects(labels, OBSTACLES)
+        '''print('idk')
+        print(detections)
+        print('idk2')'''
+
+        filter_objects(obstacles, OBSTACLE_SET)
 
         zone.trigger(detections=detections)
         frame = zone_annotator.annotate(scene=frame)      

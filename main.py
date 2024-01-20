@@ -15,10 +15,10 @@ from ultralytics import YOLO
 import supervision as sv
 import numpy as np
 
-from filter import filter_objects, Obstacle
+from filter import filter_objects
 
 min_bound = 0.25
-max_bound = 0.75
+max_bound = 1
 
 ZONE_POLYGON = np.array([
     [min_bound, min_bound],
@@ -76,16 +76,12 @@ def main():
             for _, confidence, class_id, _
             in detections
         ]
+
         frame = box_annotator.annotate(
             scene=frame, 
             detections=detections, 
             labels=labels
         )
-
-        #print('idk')
-        #print(labels)
-        #print(type(labels[0]))
-        #print('idk2')
 
         filter_objects(labels)
 
@@ -94,8 +90,8 @@ def main():
         
         cv2.imshow("yolov8", frame)
 
-        #see which objects model was trained on
-        '''print("idk")
+        '''#see which objects model was trained on
+        print("idk")
         print(result)
         print("ikd2")'''
 

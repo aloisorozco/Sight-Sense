@@ -16,10 +16,10 @@ import supervision as sv
 import numpy as np
 
 from filter import filter_objects, Obstacle
-from notify import process_objects_to_alerts
+from notify import sort_and_trim_objects
 
-#cell phone is here just for testing purposes
-OBSTACLE_SET = {"person", "car", "bicycle", "bus", "train", "truck", "bench", "chair", "cell phone"}
+#cell phone and bottle are here just for testing purposes
+OBSTACLE_SET = {"person", "car", "bicycle", "bus", "train", "truck", "bench", "chair", "cell phone", "bottle"}
 
 URGENT_OBSTACLE_SET = {"car", "bicycle", "bus", "train", "truck", "cell phone"}
 
@@ -73,6 +73,7 @@ def main():
     )
 
     while True:
+
         ret, frame = cap.read()
 
         result = model(frame, agnostic_nms=True)[0]
@@ -99,7 +100,8 @@ def main():
         print(detections)
         print('idk2')'''
 
-        print(process_objects_to_alerts(filter_objects(obstacles, OBSTACLE_SET), URGENT_OBSTACLE_SET, "vehicles"))
+        #print(process_objects_to_alerts(filter_objects(obstacles, OBSTACLE_SET), URGENT_OBSTACLE_SET, "vehicles"))
+        print(sort_and_trim_objects(filter_objects(obstacles, OBSTACLE_SET)))
 
         zone.trigger(detections=detections)
         frame = zone_annotator.annotate(scene=frame)      

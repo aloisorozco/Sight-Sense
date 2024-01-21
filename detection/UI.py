@@ -9,6 +9,8 @@ import supervision as sv
 import numpy as np
 import time
 
+from audio.tts import create_config, generate_and_play
+
 class User_Interface:
 
     def __init__(self, model, cap, zone, zone_polygon, zone_annotator, box_annotator):
@@ -17,6 +19,8 @@ class User_Interface:
         self.app.title('Sight Sense')
         self.app.geometry("1920x1080+10+20")
         self.app.attributes("-fullscreen", True)
+
+        self.tts_config = create_config()
 
         s = ttk.Style(self.app)
         s.theme_use('winnative')
@@ -62,7 +66,7 @@ class User_Interface:
         self.slider_obj_size.grid(row=3, column=1, padx=50, pady=25)
 
         notebook.pack(expand=True, fill="both")
-        self.OBSTACLE_SET = {"door", "person", "car", "bicycle", "bus", "train", "truck", "bench", "chair", "cell phone", "bottle"}
+        self.OBSTACLE_SET = {"door", "person", "car", "bicycle", "bus", "train", "truck", "bench", "chair"}
 
         self.timed_out = 0
 
@@ -112,6 +116,8 @@ class User_Interface:
 
         if len(obstacles) > 0 and time.time() > self.timed_out:
             print(obstacles)
+            for obstacle in obstacles:
+                generate_and_play(obstacle.__str__(), self.tts_config)
             self.timed_out = time.time() + self.slider_upd.get()
 
         zone.trigger(detections=detections)

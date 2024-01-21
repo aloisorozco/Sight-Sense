@@ -61,3 +61,6 @@ zone_annotator = sv.PolygonZoneAnnotator(
 
 timed_out = 0
 ui = User_Interface(model, cap, zone, zone_polygon, zone_annotator, box_annotator)
+
+while(True):
+    ui.open_camera(model, cap, zone, zone_polygon, zone_annotator, box_annotator)

@@ -70,7 +70,7 @@ class User_Interface:
 
         self.timed_out = 0
 
-        self.app.mainloop()
+        # self.open_camera(model, cap, zone, zone_polygon, zone_annotator, box_annotator)
 
 
     def get_confidence(self):
@@ -123,14 +123,14 @@ class User_Interface:
         zone.trigger(detections=detections)
         frame = zone_annotator.annotate(scene=frame)      
         
-        opencv_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA) 
+        # opencv_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA) 
 
-        captured_image = Image.fromarray(opencv_image) 
+        # captured_image = Image.fromarray(opencv_image) 
  
-        photo_image = ImageTk.PhotoImage(image=captured_image) 
+        # photo_image = ImageTk.PhotoImage(image=captured_image) 
 
-        self.label_screen.photo_image = photo_image 
+        # self.label_screen.photo_image = photo_image 
 
-        self.label_screen.configure(image=photo_image) 
+        # self.label_screen.configure(image=photo_image) 
 
-        self.label_screen.after(10, lambda: self.open_camera(model, cap, zone, zone_polygon, zone_annotator, box_annotator)) 
+        # self.label_screen.after(10, lambda: self.open_camera(model, cap, zone, zone_polygon, zone_annotator, box_annotator)) 

@@ -23,7 +23,7 @@ from notify import sort_and_trim_objects
 #cell phone and bottle are here just for testing purposes
 OBSTACLE_SET = {"person", "car", "bicycle", "bus", "train", "truck", "bench", "chair", "cell phone", "bottle"}
 
-URGENT_OBSTACLE_SET = {"car", "bicycle", "bus", "train", "truck", "cell phone"}
+URGENT_OBSTACLE_SET = {"car", "bicycle", "bus", "train", "truck", "cellphone"}
 
 min_bound = 0.5
 max_bound = 1
@@ -74,8 +74,6 @@ def main():
         text_scale=2
     )
 
-    print(zone_polygon)
-
     timed_out = 0
 
     while True:
@@ -114,11 +112,6 @@ def main():
         frame = zone_annotator.annotate(scene=frame)      
         
         cv2.imshow("yolov8", frame)
-
-        '''#see which objects model was trained on
-        print("idk")
-        print(result)
-        print("ikd2")'''
 
         if (cv2.waitKey(30) == 27):
             break

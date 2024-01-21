@@ -2,6 +2,8 @@ import os
 import torch
 from transformers import pipeline
 from datasets import load_dataset
+from nemo.collections.tts.models import FastPitchModel
+from nemo.collections.tts.models import HifiGanModel
 import soundfile as sf
 import time
 import pyaudio
@@ -21,23 +23,31 @@ if not os.path.isdir(CACHE_DIR):
 class tts_config:
     def __init__(self):
         self.speaker_embedding = None
-        self.synthesiser = None
+        self.spec_generator = None
+        self.model = None
 
 
 def create_config():
-    synthesiser = load_model()
+    spec_generator, model = load_model()
     speaker_embedding = load_speaker()
 
     config = tts_config()
     config.speaker_embedding = speaker_embedding
-    config.synthesiser = synthesiser
+    config.spec_generator = spec_generator
+    config.model = model
 
     return config
 
 
 def load_model():
-    model = pipeline("text-to-speech", "microsoft/speecht5_tts")
-    return model
+    # Load FastPitch
+    spec_generator = FastPitchModel.from_pretrained("nvidia/tts_en_fastpitch")
+
+    # Load vocoder
+    model = HifiGanModel.from_pretrained(model_name="nvidia/tts_hifigan")
+
+    return spec_generator, model
+
 
 
 def load_speaker():
@@ -46,17 +56,21 @@ def load_speaker():
     return speaker_embedding
 
 
-def speak(text, model, speaker_embedding):
+def speak(text, config):
     # measure time consumption
     start = time.time()
 
     # synthesise speech with the speaker's embedding
-    speech = model(text, forward_params={"speaker_embeddings": speaker_embedding})
+    # speech = model(text, forward_params={"speaker_embeddings": speaker_embedding})
+
+    parsed = config.spec_generator.parse("You can type your sentence here to get nemo to produce speech.")
+    spectrogram = config.spec_generator.generate_spectrogram(tokens=parsed)
+    audio = config.model.convert_spectrogram_to_audio(spec=spectrogram)
 
     end = time.time()
     print("Keyword " + text + ", was read in " + str(end - start) + "s.")
         
-    return speech
+    return audio
 
 
 def play_audio_once(audio_path):
@@ -90,7 +104,7 @@ def try_generate(keyword, config):
     # checks if the file corresponding to the keyword exists, to avoid regenerating it
     if not os.path.isfile(keyword_file_path):
         print("Generating file for keyword " + keyword + "...")
-        speech = speak(keyword, config.synthesiser, config.speaker_embedding)
+        speech, rate = speak(keyword, config)
         
         sf.write(keyword_file_path, speech["audio"], samplerate=speech["sampling_rate"])
 

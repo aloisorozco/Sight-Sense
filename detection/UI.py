@@ -32,7 +32,7 @@ class User_Interface:
         tab_start_camera = ttk.Frame(notebook)
         tab_settings = ttk.Frame(notebook)
 
-        notebook.add(tab_start_camera, text="Open Camera")
+        notebook.add(tab_start_camera, text="Camera")
         notebook.add(tab_settings, text="Settings")
 
         # Add content to Tab 1

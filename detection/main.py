@@ -37,7 +37,7 @@ args = parse_arguments()
 frame_width, frame_height = args.webcam_resolution
 
 #TODO: change to 1 for webcam
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(1)
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, frame_width)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, frame_height)
 

@@ -8,9 +8,8 @@ import cv2
 import supervision as sv
 import numpy as np
 import time
-from audio.spatial import create_spatial_config
 
-from audio.tts import create_config, generate_and_play, generate_and_play_spatial
+from audio.tts import create_config, generate_and_play
 
 class User_Interface:
 
@@ -21,11 +20,7 @@ class User_Interface:
         self.app.geometry("1920x1080+10+20")
         self.app.attributes("-fullscreen", True)
 
-        MAX_X = 1000
-        MAX_VOLUME_PARANTHESES_MAYBE_Z_PARANTHESES = 1000
-
         self.tts_config = create_config()
-        self.spatial_config = create_spatial_config(MAX_X, MAX_VOLUME_PARANTHESES_MAYBE_Z_PARANTHESES)
 
         s = ttk.Style(self.app)
         s.theme_use('winnative')
@@ -122,8 +117,7 @@ class User_Interface:
         if len(obstacles) > 0 and time.time() > self.timed_out:
             print(obstacles)
             for obstacle in obstacles:
-                #generate_and_play(obstacle.__str__(), self.tts_config)
-                generate_and_play_spatial(obstacle.__str__(), self.tts_config, obstacle.position[0], 1000, self.spatial_config)
+                generate_and_play(obstacle.__str__(), self.tts_config)
             self.timed_out = time.time() + self.slider_upd.get()
 
         zone.trigger(detections=detections)

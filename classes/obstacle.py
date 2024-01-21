@@ -38,7 +38,7 @@ class Obstacle:
 
 
   def __str__(self):
-    return self.name + " detected, size: " + str(self.size) + " pos: " + str(self.position) + " in ROI: " + str(not self.is_not_in_ROI)
+    return self.name + " detected"#+", size: " + str(self.size) + " pos: " + str(self.position) + " in ROI: " + str(not self.is_not_in_ROI)
   
   def __repr__(self):
     return self.__str__()

@@ -1,17 +1,9 @@
-'''from ultralytics import YOLO
-#from ultralytics.yolo.v8.detect.predict import DetectionPredictor
-import cv2
-
-model = YOLO("yolov8x.pt")
-
-results = model.predict(source="0", show=True)
-
-print(results)'''
-
-import time
-
+import socket, pickle
 import cv2
 import argparse
+
+from tkinter import *
+from PIL import Image, ImageTk 
 
 from ultralytics import YOLO
 import supervision as sv
@@ -23,16 +15,19 @@ from notify import sort_and_trim_objects
 #cell phone and bottle are here just for testing purposes
 OBSTACLE_SET = {"person", "car", "bicycle", "bus", "train", "truck", "bench", "chair", "cell phone", "bottle"}
 
-URGENT_OBSTACLE_SET = {"car", "bicycle", "bus", "train", "truck", "cell phone"}
+URGENT_OBSTACLE_SET = {"car", "bicycle", "bus", "train", "truck", "cellphone"}
 
-min_bound = 0.5
-max_bound = 1
+min_x_bound = 0.3
+max_x_bound = 0.7
+
+min_y_bound = 0
+max_y_bound = 1
 
 ZONE_POLYGON = np.array([
-    [min_bound, min_bound],
-    [max_bound, min_bound],
-    [max_bound, max_bound],
-    [min_bound, max_bound]
+    [min_x_bound, min_y_bound],
+    [max_x_bound, min_y_bound],
+    [max_x_bound, max_y_bound],
+    [min_x_bound, max_y_bound]
 ])
 
 
@@ -47,11 +42,24 @@ def parse_arguments() -> argparse.Namespace:
     args = parser.parse_args()
     return args
 
+def server_program():
+    # get the hostname
+    host = socket.gethostname()
+    port = 5000  # initiate port no above 1024
 
-def main():
+    server_socket = socket.socket()  # get instance
+    # look closely. The bind() function takes tuple as argument
+    server_socket.bind((host, port))  # bind host address and port together
+
+    # configure how many client the server can listen simultaneously
+    server_socket.listen(2)
+    conn, address = server_socket.accept()  # accept new connection
+    print("Connection from: " + str(address))
+
     args = parse_arguments()
     frame_width, frame_height = args.webcam_resolution
 
+    #TODO: change to 1 for webcam
     cap = cv2.VideoCapture(0)
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, frame_width)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, frame_height)
@@ -74,12 +82,18 @@ def main():
         text_scale=2
     )
 
-    print(zone_polygon)
-
     timed_out = 0
 
     while True:
+        # receive data stream. it won't accept data packet greater than 1024 bytes
+        '''data = conn.recv(1024).decode()
+        if not data:
+            # if data is not received break
+            break
+        print("from connected user: " + str(data))'''
+        #data = input(' -> ')
 
+        
         ret, frame = cap.read()
 
         result = model(frame, agnostic_nms=True)[0]
@@ -111,18 +125,18 @@ def main():
             timed_out = time.time() + 5'''
 
         zone.trigger(detections=detections)
-        frame = zone_annotator.annotate(scene=frame)      
-        
-        cv2.imshow("yolov8", frame)
+        frame = zone_annotator.annotate(scene=frame)  
 
-        '''#see which objects model was trained on
-        print("idk")
-        print(result)
-        print("ikd2")'''
+        print(frame) 
 
-        if (cv2.waitKey(30) == 27):
-            break
+        # Pickle the object and send it to the server
+        data_string = pickle.dumps(frame)
+        conn.send(data_string)
+
+        #conn.send(data.encode())  # send data to the client
+
+    conn.close()  # close the connection
 
 
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    server_program()

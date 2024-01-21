@@ -1,4 +1,4 @@
-URGENT_OBSTACLE_SET = {"car", "bicycle", "bus", "train", "truck", "cell phone"}
+URGENT_OBSTACLE_SET = {"car", "bicycle", "bus", "train", "truck", "cellphone"}
 
 class Obstacle:
 
@@ -17,8 +17,6 @@ class Obstacle:
     elif name == 'person':
       self.hazard_order = 1
     elif name == 'bottle':
-      #bottle is here for testing purposes
-      #self.size = 0.9
       self.hazard_order = 2
     else:
       self.hazard_order = 2
@@ -38,7 +36,7 @@ class Obstacle:
 
 
   def __str__(self):
-    return self.name + " detected, size: " + str(self.size) + " pos: " + str(self.position) + " in ROI: " + str(not self.is_not_in_ROI)
+    return self.name + (" detected" if self.is_not_in_ROI else " in ROI")#+", size: " + str(self.size) + " pos: " + str(self.position) + " in ROI: " + str(not self.is_not_in_ROI)
   
   def __repr__(self):
     return self.__str__()

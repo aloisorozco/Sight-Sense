@@ -3,7 +3,7 @@ import operator
 from classes.obstacle import Obstacle
 from classes.alert import Alert
 
-def sort_and_trim_objects(obstacles: list[Obstacle]) -> list[Obstacle]:
+def sort_and_trim_objects(obstacles: list[Obstacle], updates_per_message : int, min_obj_size : float) -> list[Obstacle]:
 
   obstacles.sort(key=operator.attrgetter('hazard_order', 'is_not_in_ROI'))
 
@@ -15,7 +15,7 @@ def sort_and_trim_objects(obstacles: list[Obstacle]) -> list[Obstacle]:
       vehicle_count += 1
     if obstacle.hazard_order == 1:
       person_count += 1
-    if obstacle.size >= 0.8:
+    if obstacle.size >= min_obj_size:
       temp = obstacle
 
   if vehicle_count > 1:
@@ -38,7 +38,7 @@ def sort_and_trim_objects(obstacles: list[Obstacle]) -> list[Obstacle]:
     else:
       obstacles.insert(0, temp)
 
-  if len(obstacles) > 2:
-    return obstacles[:2]
+  if len(obstacles) > updates_per_message:
+    return obstacles[:updates_per_message]
   
   return obstacles

@@ -123,6 +123,8 @@ app = Tk()
 # Bind the app with Escape keyboard to 
 # quit app whenever pressed 
 app.bind('<Escape>', lambda e: app.quit()) 
+app.title('Sight Sense')
+app.geometry("1920x1080+10+20")
 
 # Create a label and display it on app 
 label_widget = Label(app) 

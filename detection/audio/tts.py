@@ -2,8 +2,8 @@ import os
 import torch
 from transformers import pipeline
 from datasets import load_dataset
-from nemo.collections.tts.models import FastPitchModel
-from nemo.collections.tts.models import HifiGanModel
+from fairseq.checkpoint_utils import load_model_ensemble_and_task_from_hf_hub
+from fairseq.models.text_to_speech.hub_interface import TTSHubInterface
 import soundfile as sf
 import time
 import pyaudio
@@ -23,30 +23,34 @@ if not os.path.isdir(CACHE_DIR):
 class tts_config:
     def __init__(self):
         self.speaker_embedding = None
-        self.spec_generator = None
+        self.generator = None
         self.model = None
+        self.task = None
 
 
 def create_config():
-    spec_generator, model = load_model()
+    generator, model, task = load_model()
     speaker_embedding = load_speaker()
 
     config = tts_config()
     config.speaker_embedding = speaker_embedding
-    config.spec_generator = spec_generator
+    config.generator = generator
     config.model = model
+    config.task = task
 
     return config
 
 
 def load_model():
-    # Load FastPitch
-    spec_generator = FastPitchModel.from_pretrained("nvidia/tts_en_fastpitch")
+    models, cfg, task = load_model_ensemble_and_task_from_hf_hub(
+        "facebook/fastspeech2-en-ljspeech",
+        arg_overrides={"vocoder": "hifigan", "fp16": False}
+    )
+    model = models[0]
+    TTSHubInterface.update_cfg_with_data_cfg(cfg, task.data_cfg)
+    generator = task.build_generator(model, cfg)
 
-    # Load vocoder
-    model = HifiGanModel.from_pretrained(model_name="nvidia/tts_hifigan")
-
-    return spec_generator, model
+    return generator, model, task
 
 
 
@@ -63,14 +67,13 @@ def speak(text, config):
     # synthesise speech with the speaker's embedding
     # speech = model(text, forward_params={"speaker_embeddings": speaker_embedding})
 
-    parsed = config.spec_generator.parse("You can type your sentence here to get nemo to produce speech.")
-    spectrogram = config.spec_generator.generate_spectrogram(tokens=parsed)
-    audio = config.model.convert_spectrogram_to_audio(spec=spectrogram)
+    sample = TTSHubInterface.get_model_input(config.task, text)
+    wav, rate = TTSHubInterface.get_prediction(config.task, config.model, config.generator, sample)
 
     end = time.time()
     print("Keyword " + text + ", was read in " + str(end - start) + "s.")
         
-    return audio
+    return wav, rate
 
 
 def play_audio_once(audio_path):
@@ -106,7 +109,7 @@ def try_generate(keyword, config):
         print("Generating file for keyword " + keyword + "...")
         speech, rate = speak(keyword, config)
         
-        sf.write(keyword_file_path, speech["audio"], samplerate=speech["sampling_rate"])
+        sf.write(keyword_file_path, speech, samplerate=rate)
 
     return keyword_file_path
 

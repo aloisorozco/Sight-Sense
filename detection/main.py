@@ -61,6 +61,3 @@ zone_annotator = sv.PolygonZoneAnnotator(
 
 timed_out = 0
 ui = User_Interface(model, cap, zone, zone_polygon, zone_annotator, box_annotator)
-
-'''if __name__ == "__main__":
-    main()'''

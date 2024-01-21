@@ -110,7 +110,7 @@ class User_Interface:
             labels=labels
         )
         
-        obstacles = sort_and_trim_objects(filter_objects(obstacles, self.OBSTACLE_SET, self.slider_conf.get() / 100), self.slider_msg.get(), self.slider_obj_size.get() / 100)
+        obstacles = sort_and_trim_objects(filter_objects(obstacles, self.OBSTACLE_SET, self.slider_conf.get() / 100), 2, self.slider_obj_size.get() / 100)
 
         #print(obstacles)
 

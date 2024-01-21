@@ -25,14 +25,17 @@ OBSTACLE_SET = {"person", "car", "bicycle", "bus", "train", "truck", "bench", "c
 
 URGENT_OBSTACLE_SET = {"car", "bicycle", "bus", "train", "truck", "cellphone"}
 
-min_bound = 0.5
-max_bound = 1
+min_x_bound = 0.3
+max_x_bound = 0.7
+
+min_y_bound = 0
+max_y_bound = 1
 
 ZONE_POLYGON = np.array([
-    [min_bound, min_bound],
-    [max_bound, min_bound],
-    [max_bound, max_bound],
-    [min_bound, max_bound]
+    [min_x_bound, min_y_bound],
+    [max_x_bound, min_y_bound],
+    [max_x_bound, max_y_bound],
+    [min_x_bound, max_y_bound]
 ])
 
 

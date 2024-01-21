@@ -14,15 +14,15 @@ from audio.tts import create_config, generate_and_play
 class User_Interface:
 
     def __init__(self, model, cap, zone, zone_polygon, zone_annotator, box_annotator):
-        self.app = tk.Tk()
+        '''self.app = tk.Tk()
         self.app.bind('<Escape>', lambda e: self.app.quit()) 
         self.app.title('Sight Sense')
         self.app.geometry("1920x1080+10+20")
-        self.app.attributes("-fullscreen", True)
+        self.app.attributes("-fullscreen", True)'''
 
         self.tts_config = create_config()
 
-        s = ttk.Style(self.app)
+        '''s = ttk.Style(self.app)
         s.theme_use('winnative')
         s.configure("TNotebook", tabposition='n')
 
@@ -63,9 +63,9 @@ class User_Interface:
         label_obj_size.grid(row=3, column=0, padx=300, pady=25)
 
         self.slider_obj_size = tk.Scale(tab_settings, from_=60, to=90, orient="horizontal", length=300)
-        self.slider_obj_size.grid(row=3, column=1, padx=50, pady=25)
+        self.slider_obj_size.grid(row=3, column=1, padx=50, pady=25)'''
 
-        notebook.pack(expand=True, fill="both")
+        #notebook.pack(expand=True, fill="both")
         self.OBSTACLE_SET = {"door", "person", "car", "bicycle", "bus", "train", "truck", "bench", "chair"}
 
         self.timed_out = 0
@@ -88,7 +88,7 @@ class User_Interface:
     def open_camera(self, model, cap, zone, zone_polygon, zone_annotator, box_annotator):
         ret, frame = cap.read()
 
-        self.btn_start_cam.config(state=tk.DISABLED)
+        #self.btn_start_cam.config(state=tk.DISABLED)
 
         result = model(frame, agnostic_nms=True)[0]
         detections = sv.Detections.from_yolov8(result)
@@ -110,7 +110,7 @@ class User_Interface:
             labels=labels
         )
         
-        obstacles = sort_and_trim_objects(filter_objects(obstacles, self.OBSTACLE_SET, self.slider_conf.get() / 100), 2, self.slider_obj_size.get() / 100)
+        obstacles = sort_and_trim_objects(filter_objects(obstacles, self.OBSTACLE_SET, 0.6), 2, 0.7 / 100)
 
         #print(obstacles)
 
@@ -118,7 +118,7 @@ class User_Interface:
             print(obstacles)
             for obstacle in obstacles:
                 generate_and_play(obstacle.__str__(), self.tts_config)
-            self.timed_out = time.time() + self.slider_upd.get()
+            self.timed_out = time.time() + 3
 
         zone.trigger(detections=detections)
         frame = zone_annotator.annotate(scene=frame)      

@@ -3,15 +3,17 @@ from PIL import Image, ImageTk
 from tkinter import ttk
 from filter import filter_objects, Obstacle
 from notify import sort_and_trim_objects
+import audio.tts as tts
+import threading
 
 import cv2
 import supervision as sv
 import numpy as np
 import time
 
-from audio.tts import create_config, generate_and_play
-
 class User_Interface:
+
+    speech_thread = None
 
     def __init__(self, model, cap, zone, zone_polygon, zone_annotator, box_annotator):
         self.app = tk.Tk()
@@ -20,10 +22,9 @@ class User_Interface:
         self.app.geometry("1920x1080+10+20")
         self.app.attributes("-fullscreen", True)
 
-        self.tts_config = create_config()
+        self.speech = tts.TTS()
 
         s = ttk.Style(self.app)
-        s.theme_use('winnative')
         s.configure("TNotebook", tabposition='n')
 
         notebook = ttk.Notebook(self.app)
@@ -83,9 +84,15 @@ class User_Interface:
 
     def get_msg(self):
         return self.slider_msg.get()
+    
+    def speak_messages(self, obstacles):
+        for obstacle in obstacles:
+            if obstacle != None and time.time() > self.timed_out:
+                self.speech.generate_and_play(obstacle.__str__())
 
 
     def open_camera(self, model, cap, zone, zone_polygon, zone_annotator, box_annotator):
+
         ret, frame = cap.read()
 
         self.btn_start_cam.config(state=tk.DISABLED)
@@ -110,15 +117,10 @@ class User_Interface:
             labels=labels
         )
         
-        obstacles = sort_and_trim_objects(filter_objects(obstacles, self.OBSTACLE_SET, self.slider_conf.get() / 100), self.slider_msg.get(), self.slider_obj_size.get() / 100)
-
-        #print(obstacles)
-
-        if len(obstacles) > 0 and time.time() > self.timed_out:
-            print(obstacles)
-            for obstacle in obstacles:
-                generate_and_play(obstacle.__str__(), self.tts_config)
-            self.timed_out = time.time() + self.slider_upd.get()
+        if(User_Interface.speech_thread == None or not User_Interface.speech_thread.is_alive()):
+            obstacles_to_speak = [obstacle for obstacle in obstacles if obstacle != None and time.time() > self.timed_out]
+            User_Interface.speech_thread = threading.Thread(target=self.speak_messages, args=(obstacles_to_speak,))
+            User_Interface.speech_thread.start()
 
         zone.trigger(detections=detections)
         frame = zone_annotator.annotate(scene=frame)      
@@ -126,11 +128,11 @@ class User_Interface:
         opencv_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA) 
 
         captured_image = Image.fromarray(opencv_image) 
- 
+
         photo_image = ImageTk.PhotoImage(image=captured_image) 
 
         self.label_screen.photo_image = photo_image 
 
         self.label_screen.configure(image=photo_image) 
 
-        self.label_screen.after(10, lambda: self.open_camera(model, cap, zone, zone_polygon, zone_annotator, box_annotator)) 
+        self.label_screen.after(10, lambda: self.open_camera(model, cap, zone, zone_polygon, zone_annotator, box_annotator))

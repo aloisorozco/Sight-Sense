@@ -1,26 +1,24 @@
-import tkinter as tk
 from PIL import Image, ImageTk 
 from tkinter import ttk
-from filter import filter_objects, Obstacle
-from notify import sort_and_trim_objects
+from filter import Obstacle
+from ultralytics import YOLO
+from annotators import Annotators
+
 import audio.tts as tts
 import threading
-
 import cv2
 import supervision as sv
-import numpy as np
 import time
+import tkinter as tk
 
 class User_Interface:
 
     speech_thread = None
 
-    def __init__(self, model, cap, zone, zone_polygon, zone_annotator, box_annotator):
+    def __init__(self, args):
         self.app = tk.Tk()
-        self.app.bind('<Escape>', lambda e: self.app.quit()) 
         self.app.title('Sight Sense')
         self.app.geometry("1920x1080+10+20")
-        self.app.attributes("-fullscreen", True)
 
         self.speech = tts.TTS()
 
@@ -39,7 +37,7 @@ class User_Interface:
         # Add content to Tab 1
         self.label_screen = tk.Label(tab_start_camera)
         self.label_screen.grid(row=0, column=0, padx=125, pady=5)
-        self.btn_start_cam = tk.Button(tab_start_camera, text="Open Camera", command= lambda: self.open_camera(model, cap, zone, zone_polygon, zone_annotator, box_annotator))
+        self.btn_start_cam = tk.Button(tab_start_camera, text="Open Camera", command= lambda: self.open_camera(args))
         self.btn_start_cam.grid(row=1, column=0, padx=725, pady=5)
 
         label_conf = tk.Label(tab_settings, text="Confidence Percentage:")
@@ -90,49 +88,64 @@ class User_Interface:
             if obstacle != None and time.time() > self.timed_out:
                 self.speech.generate_and_play(obstacle.__str__())
 
-
-    def open_camera(self, model, cap, zone, zone_polygon, zone_annotator, box_annotator):
-
-        ret, frame = cap.read()
-
+    def open_camera(self, args):
+    
         self.btn_start_cam.config(state=tk.DISABLED)
+        frame_width, frame_height = args.webcam_resolution
+        CONFIDENCE_THRESHOLD = 0.5
 
-        result = model(frame, agnostic_nms=True)[0]
-        detections = sv.Detections.from_yolov8(result)
-        labels = [
-            f"{model.model.names[class_id]} {confidence:0.2f}"
-            for _, confidence, class_id, _
-            in detections
-        ]
+        #change to 1 for webcam - if you have another device connected, otherwise leave at 0 for your default webcam
+        # Capture vide + load model
+        cap = cv2.VideoCapture(0)
+        model = YOLO("yolov8n.pt")
 
-        obstacles = [
-            Obstacle(model.model.names[class_id], confidence, xyxy, zone_polygon)
-            for xyxy, confidence, class_id, _
-            in detections
-        ]
+        cap.set(cv2.CAP_PROP_FRAME_WIDTH, frame_width)
+        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, frame_height)
 
-        frame = box_annotator.annotate(
-            scene=frame, 
-            detections=detections, 
-            labels=labels
-        )
+        annotators = Annotators(args.webcam_resolution)
         
-        if(User_Interface.speech_thread == None or not User_Interface.speech_thread.is_alive()):
-            obstacles_to_speak = [obstacle for obstacle in obstacles if obstacle != None and time.time() > self.timed_out]
-            User_Interface.speech_thread = threading.Thread(target=self.speak_messages, args=(obstacles_to_speak,))
-            User_Interface.speech_thread.start()
+        while True:
 
-        zone.trigger(detections=detections)
-        frame = zone_annotator.annotate(scene=frame)      
-        
-        opencv_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA) 
+            succ, frame = cap.read()
+            if not succ:
+                print("frame not returned - exiting")
+                break  # Break the loop if no frame is returned
 
-        captured_image = Image.fromarray(opencv_image) 
+            result = model(frame, agnostic_nms=True)[0]
+            detections = sv.Detections.from_yolov8(result)
+            labels = [
+                f"{model.model.names[class_id]} {confidence:0.2f}"
+                for _, confidence, class_id, _ in detections
+            ]
 
-        photo_image = ImageTk.PhotoImage(image=captured_image) 
+            obstacles = [
+                Obstacle(model.model.names[class_id], confidence, xyxy, annotators.zone_polygon)
+                for xyxy, confidence, class_id, _
+                in detections
+            ]
 
-        self.label_screen.photo_image = photo_image 
+            frame = annotators.box_annotator.annotate(
+                scene=frame,
+                detections=detections,
+                labels=labels
+            )
 
-        self.label_screen.configure(image=photo_image) 
+            if User_Interface.speech_thread is None or not User_Interface.speech_thread.is_alive():
+                obstacles_to_speak = [obstacle for obstacle in obstacles if obstacle is not None and time.time() > self.timed_out]
+                User_Interface.speech_thread = threading.Thread(target=self.speak_messages, args=(obstacles_to_speak,))
+                User_Interface.speech_thread.start()
 
-        self.label_screen.after(10, lambda: self.open_camera(model, cap, zone, zone_polygon, zone_annotator, box_annotator))
+            annotators.zone.trigger(detections=detections)
+            frame = annotators.zone_annotator.annotate(scene=frame)
+
+            opencv_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
+
+            captured_image = Image.fromarray(opencv_image)
+
+            photo_image = ImageTk.PhotoImage(image=captured_image)
+
+            self.label_screen.photo_image = photo_image
+
+            self.label_screen.configure(image=photo_image)
+
+            self.label_screen.update()  # Update GUI to display the new frame

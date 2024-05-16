@@ -17,18 +17,15 @@ class Annotators:
     ])
 
     def __init__(self, webcam_resolution) -> None:
-
-        self.box_annotator = sv.BoxAnnotator(
-            thickness=2,
-            text_thickness=2,
-            text_scale=1
-        )
+    
+        self.bb_annotator = sv.BoundingBoxAnnotator()
+        self.label_annotator = sv.LabelAnnotator()
 
         self.zone_polygon = (Annotators.ZONE_POLYGON * np.array(webcam_resolution)).astype(int)
         self.zone = sv.PolygonZone(polygon=self.zone_polygon, frame_resolution_wh=tuple(webcam_resolution))
         self.zone_annotator = sv.PolygonZoneAnnotator(
             zone=self.zone, 
-            color=sv.Color.red(),
+            color=sv.Color.RED,
             thickness=2,
             text_thickness=4,
             text_scale=2

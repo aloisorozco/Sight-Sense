@@ -109,6 +109,7 @@ class User_Interface:
         # Capture vide + load model
         cap = cv2.VideoCapture(0)
         model = YOLO("yolov8n.pt")
+        model.fuse()
 
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, frame_width)
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, frame_height)
@@ -123,26 +124,19 @@ class User_Interface:
                 break  # Break the loop if no frame is returned
 
             result = model(frame, agnostic_nms=True)[0]
-            detections = sv.Detections.from_yolov8(result)
+            detections = sv.Detections.from_ultralytics(result)
             labels = [
-                f"{model.model.names[class_id]} {confidence:0.2f}"
-                for _, confidence, class_id, _ in detections
+                f"{model.names[class_id]} {confidence:0.2f}"
+                for _, _, confidence, class_id, _ , _ in detections
             ]
 
             time_red = time.time()
 
             obstacles = [
-                Obstacle(model.model.names[class_id],
+                Obstacle(model.names[class_id],
                          confidence, xyxy, annotators.zone_polygon, time_red)
-                for xyxy, confidence, class_id, _
-                in detections
+                for xyxy, _, confidence, class_id, _, _ in detections
             ]
-
-            frame = annotators.box_annotator.annotate(
-                scene=frame,
-                detections=detections,
-                labels=labels
-            )
 
             # render only objects that are still on screen
             # time_now = time.time()
@@ -156,8 +150,22 @@ class User_Interface:
                 User_Interface.speech_thread = threading.Thread(target=self._speak_messages, args=(obstacles_to_speak,))
                 User_Interface.speech_thread.start()
 
+
+            frame = annotators.bb_annotator.annotate(
+                scene=frame,
+                detections=detections
+            )
+
+            frame = annotators.label_annotator.annotate(
+                scene=frame,
+                detections=detections,
+                labels=labels
+            )
+
+            
             annotators.zone.trigger(detections=detections)
             frame = annotators.zone_annotator.annotate(scene=frame)
+
 
             cv2.imshow("Sight Sence - Frame", frame)
 

@@ -13,11 +13,11 @@ import tkinter as tk
 
 class User_Interface:
 
-    speech_thread = None
+    _speech_thread = None
 
     def __init__(self, args):
         self.app = tk.Tk()
-        self.app.title('Sight Sense')
+        self.app.title('Sight Sense - UI')
         self.app.geometry("1920x1080+10+20")
 
         self.speech = tts.TTS()
@@ -83,14 +83,14 @@ class User_Interface:
     def get_msg(self):
         return self.slider_msg.get()
     
-    def speak_messages(self, obstacles):
+    def _speak_messages(self, obstacles):
         for obstacle in obstacles:
             if obstacle != None and time.time() > self.timed_out:
                 self.speech.generate_and_play(obstacle.__str__())
 
     def open_camera(self, args):
     
-        self.btn_start_cam.config(state=tk.DISABLED)
+        self.app.withdraw()
         frame_width, frame_height = args.webcam_resolution
         CONFIDENCE_THRESHOLD = 0.5
 
@@ -130,22 +130,19 @@ class User_Interface:
                 labels=labels
             )
 
-            if User_Interface.speech_thread is None or not User_Interface.speech_thread.is_alive():
+            if User_Interface._speech_thread is None or not User_Interface._speech_thread.is_alive():
                 obstacles_to_speak = [obstacle for obstacle in obstacles if obstacle is not None and time.time() > self.timed_out]
-                User_Interface.speech_thread = threading.Thread(target=self.speak_messages, args=(obstacles_to_speak,))
-                User_Interface.speech_thread.start()
+                User_Interface._speech_thread = threading.Thread(target=self._speak_messages, args=(obstacles_to_speak,))
+                User_Interface._speech_thread.start()
 
             annotators.zone.trigger(detections=detections)
             frame = annotators.zone_annotator.annotate(scene=frame)
 
-            opencv_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
+            cv2.imshow("Sight Sence - Frame", frame)
 
-            captured_image = Image.fromarray(opencv_image)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
 
-            photo_image = ImageTk.PhotoImage(image=captured_image)
-
-            self.label_screen.photo_image = photo_image
-
-            self.label_screen.configure(image=photo_image)
-
-            self.label_screen.update()  # Update GUI to display the new frame
+        # Release the capture object and close all windows
+        cap.release()
+        cv2.destroyAllWindows()

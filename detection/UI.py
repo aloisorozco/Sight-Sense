@@ -15,7 +15,7 @@ import tkinter as tk
 
 class User_Interface:
 
-    _speech_thread = None
+    speech_thread = None
 
     def __init__(self, args):
         self.app = tk.Tk()
@@ -78,9 +78,9 @@ class User_Interface:
 
         self.timed_out = 0
 
-        # Initialize the thread pool executor
-        self.executor = concurrent.futures.ThreadPoolExecutor(
-            max_workers=1)
+        # # Initialize the thread pool executor
+        # self.executor = concurrent.futures.ThreadPoolExecutor(
+        #     max_workers=1)
 
         self.app.mainloop()
 
@@ -92,16 +92,18 @@ class User_Interface:
 
     def get_msg(self):
         return self.slider_msg.get()
+    
     def _speak_messages(self, obstacles):
         for obstacle in obstacles:
-            if obstacle != None and time.time() > self.timed_out:
-                self.speech.generate_and_play(obstacle.__str__())
+            self.speech.generate_and_play(obstacle.__str__())
 
     def open_camera(self, args):
     
         self.app.withdraw()
         frame_width, frame_height = args.webcam_resolution
         CONFIDENCE_THRESHOLD = 0.5
+        TIME_OUT = 2
+
 
         # change to 1 for webcam - if you have another device connected, otherwise leave at 0 for your default webcam
         # Capture vide + load model
@@ -127,9 +129,11 @@ class User_Interface:
                 for _, confidence, class_id, _ in detections
             ]
 
+            time_red = time.time()
+
             obstacles = [
                 Obstacle(model.model.names[class_id],
-                         confidence, xyxy, annotators.zone_polygon)
+                         confidence, xyxy, annotators.zone_polygon, time_red)
                 for xyxy, confidence, class_id, _
                 in detections
             ]
@@ -140,12 +144,17 @@ class User_Interface:
                 labels=labels
             )
 
-            if User_Interface._speech_thread is None or not User_Interface._speech_thread.is_alive():
-                # render only objects that are still on screen
-                obstacles_to_speak = [
-                    obstacle for obstacle in obstacles if obstacle is not None and time.time() > self.timed_out]
-                # submit task to thread pool
-                self.executor.submit(self._speak_messages, obstacles_to_speak)
+            # render only objects that are still on screen
+            # time_now = time.time()
+            # obstacles_to_speak = [
+            #     obstacle for obstacle in obstacles if obstacle is not None and time_now - obstacle.time_registered < TIME_OUT]
+            # # submit task to thread pool
+            # self.executor.submit(self._speak_messages, obstacles_to_speak)
+
+            if(User_Interface.speech_thread == None or not User_Interface.speech_thread.is_alive()):
+                obstacles_to_speak = [obstacle for obstacle in obstacles if obstacle != None and time.time() - obstacle.time_registered < TIME_OUT]
+                User_Interface.speech_thread = threading.Thread(target=self._speak_messages, args=(obstacles_to_speak,))
+                User_Interface.speech_thread.start()
 
             annotators.zone.trigger(detections=detections)
             frame = annotators.zone_annotator.annotate(scene=frame)

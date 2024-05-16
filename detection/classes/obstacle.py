@@ -3,11 +3,13 @@ URGENT_OBSTACLE_SET = {"car", "bicycle", "bus", "train", "truck"}
 class Obstacle:
 
   #is_not_in_ROI for sorting cuz false comes before true
-  def __init__(self, name, confidence, xyxy, zone_polygon):
+  def __init__(self, name, confidence, xyxy, zone_polygon, time):
     self.name = name
     self.confidence = confidence
     self.xyxy = xyxy
     self.size = 0
+
+    self.time_registered = time
 
     self.set_position_and_size()
     self.set_ROI(zone_polygon)

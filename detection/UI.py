@@ -1,4 +1,4 @@
-from PIL import Image, ImageTk 
+from PIL import Image, ImageTk
 from tkinter import ttk
 from filter import Obstacle
 from ultralytics import YOLO
@@ -6,10 +6,12 @@ from annotators import Annotators
 
 import audio.tts as tts
 import threading
+import concurrent.futures
 import cv2
 import supervision as sv
 import time
 import tkinter as tk
+
 
 class User_Interface:
 
@@ -37,52 +39,59 @@ class User_Interface:
         # Add content to Tab 1
         self.label_screen = tk.Label(tab_start_camera)
         self.label_screen.grid(row=0, column=0, padx=125, pady=5)
-        self.btn_start_cam = tk.Button(tab_start_camera, text="Open Camera", command= lambda: self.open_camera(args))
+        self.btn_start_cam = tk.Button(
+            tab_start_camera, text="Open Camera", command=lambda: self.open_camera(args))
         self.btn_start_cam.grid(row=1, column=0, padx=725, pady=5)
 
         label_conf = tk.Label(tab_settings, text="Confidence Percentage:")
         label_conf.grid(row=0, column=0, padx=300, pady=25)
 
-        self.slider_conf = tk.Scale(tab_settings, from_=40, to=80, orient="horizontal", length=300)
+        self.slider_conf = tk.Scale(
+            tab_settings, from_=40, to=80, orient="horizontal", length=300)
         self.slider_conf.grid(row=0, column=1, padx=50, pady=25)
 
         label_upd = tk.Label(tab_settings, text="Update Rate (sec/update):")
         label_upd.grid(row=1, column=0, padx=300, pady=25)
 
-        self.slider_upd = tk.Scale(tab_settings, from_=3, to=20, orient="horizontal", length=300)
+        self.slider_upd = tk.Scale(
+            tab_settings, from_=3, to=20, orient="horizontal", length=300)
         self.slider_upd.grid(row=1, column=1, padx=50, pady=25)
 
         label_msg = tk.Label(tab_settings, text="Message Per Update:")
         label_msg.grid(row=2, column=0, padx=300, pady=25)
 
-        self.slider_msg = tk.Scale(tab_settings, from_=1, to=3, orient="horizontal", length=300)
+        self.slider_msg = tk.Scale(
+            tab_settings, from_=1, to=3, orient="horizontal", length=300)
         self.slider_msg.grid(row=2, column=1, padx=50, pady=25)
 
-        label_obj_size = tk.Label(tab_settings, text="Hazard Object Size Percentage Threshold:")
+        label_obj_size = tk.Label(
+            tab_settings, text="Hazard Object Size Percentage Threshold:")
         label_obj_size.grid(row=3, column=0, padx=300, pady=25)
 
-        self.slider_obj_size = tk.Scale(tab_settings, from_=60, to=90, orient="horizontal", length=300)
+        self.slider_obj_size = tk.Scale(
+            tab_settings, from_=60, to=90, orient="horizontal", length=300)
         self.slider_obj_size.grid(row=3, column=1, padx=50, pady=25)
 
         notebook.pack(expand=True, fill="both")
-        self.OBSTACLE_SET = {"door", "person", "car", "bicycle", "bus", "train", "truck", "bench", "chair"}
+        self.OBSTACLE_SET = {"door", "person", "car",
+                             "bicycle", "bus", "train", "truck", "bench", "chair"}
 
         self.timed_out = 0
 
-        self.app.mainloop()
+        # Initialize the thread pool executor
+        self.executor = concurrent.futures.ThreadPoolExecutor(
+            max_workers=1)
 
+        self.app.mainloop()
 
     def get_confidence(self):
         return self.slider_conf.get()
-    
 
     def get_upd(self):
         return self.slider_upd.get()
-    
 
     def get_msg(self):
         return self.slider_msg.get()
-    
     def _speak_messages(self, obstacles):
         for obstacle in obstacles:
             if obstacle != None and time.time() > self.timed_out:
@@ -94,7 +103,7 @@ class User_Interface:
         frame_width, frame_height = args.webcam_resolution
         CONFIDENCE_THRESHOLD = 0.5
 
-        #change to 1 for webcam - if you have another device connected, otherwise leave at 0 for your default webcam
+        # change to 1 for webcam - if you have another device connected, otherwise leave at 0 for your default webcam
         # Capture vide + load model
         cap = cv2.VideoCapture(0)
         model = YOLO("yolov8n.pt")
@@ -103,7 +112,7 @@ class User_Interface:
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, frame_height)
 
         annotators = Annotators(args.webcam_resolution)
-        
+
         while True:
 
             succ, frame = cap.read()
@@ -119,7 +128,8 @@ class User_Interface:
             ]
 
             obstacles = [
-                Obstacle(model.model.names[class_id], confidence, xyxy, annotators.zone_polygon)
+                Obstacle(model.model.names[class_id],
+                         confidence, xyxy, annotators.zone_polygon)
                 for xyxy, confidence, class_id, _
                 in detections
             ]
@@ -131,9 +141,11 @@ class User_Interface:
             )
 
             if User_Interface._speech_thread is None or not User_Interface._speech_thread.is_alive():
-                obstacles_to_speak = [obstacle for obstacle in obstacles if obstacle is not None and time.time() > self.timed_out]
-                User_Interface._speech_thread = threading.Thread(target=self._speak_messages, args=(obstacles_to_speak,))
-                User_Interface._speech_thread.start()
+                # render only objects that are still on screen
+                obstacles_to_speak = [
+                    obstacle for obstacle in obstacles if obstacle is not None and time.time() > self.timed_out]
+                # submit task to thread pool
+                self.executor.submit(self._speak_messages, obstacles_to_speak)
 
             annotators.zone.trigger(detections=detections)
             frame = annotators.zone_annotator.annotate(scene=frame)

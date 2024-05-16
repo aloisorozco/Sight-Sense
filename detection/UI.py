@@ -104,7 +104,6 @@ class User_Interface:
         CONFIDENCE_THRESHOLD = 0.5
         TIME_OUT = 2
 
-
         # change to 1 for webcam - if you have another device connected, otherwise leave at 0 for your default webcam
         # Capture vide + load model
         cap = cv2.VideoCapture(0)

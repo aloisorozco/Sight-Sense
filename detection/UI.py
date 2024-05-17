@@ -107,7 +107,7 @@ class User_Interface:
         # change to 1 for webcam - if you have another device connected, otherwise leave at 0 for your default webcam
         # Capture vide + load model
         cap = cv2.VideoCapture(0)
-        model = YOLO("yolov8n.pt")
+        model = YOLO("best.pt")
         model.fuse()
 
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, frame_width)

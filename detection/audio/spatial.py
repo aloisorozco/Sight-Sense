@@ -1,9 +1,11 @@
 from pydub import AudioSegment
 
+
 class spatial_config:
     def __init__(self):
         self.max_x = None
         self.max_y = None
+
 
 def create_spatial_config(max_x, max_volume_parantheses_maybe_z_parantheses):
     config = spatial_config()
@@ -11,6 +13,7 @@ def create_spatial_config(max_x, max_volume_parantheses_maybe_z_parantheses):
     config.max_volume_parantheses_maybe_z_parantheses = max_volume_parantheses_maybe_z_parantheses
 
     return config
+
 
 def generate_spatial_audio(file_name, x, volume_parantheses_maybe_z_parantheses, config):
     # Load your audio file
@@ -23,7 +26,9 @@ def generate_spatial_audio(file_name, x, volume_parantheses_maybe_z_parantheses,
     panned_audio = audio_file.pan(pan)
 
     # Adjust volume based on y coordinate
-    volume = int((volume_parantheses_maybe_z_parantheses / config.max_volume_parantheses_maybe_z_parantheses) * 100)  # Map y coordinate to range 0 to 100
+    # Map y coordinate to range 0 to 100
+    volume = int((volume_parantheses_maybe_z_parantheses /
+                 config.max_volume_parantheses_maybe_z_parantheses) * 100)
     panned_audio = panned_audio - (100 - volume)
 
     # Export the processed audio file

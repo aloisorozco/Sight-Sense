@@ -92,13 +92,13 @@ class User_Interface:
 
     def get_msg(self):
         return self.slider_msg.get()
-    
+
     def _speak_messages(self, obstacles):
         for obstacle in obstacles:
             self.speech.generate_and_play(obstacle.__str__())
 
     def open_camera(self, args):
-    
+
         self.app.withdraw()
         frame_width, frame_height = args.webcam_resolution
         CONFIDENCE_THRESHOLD = 0.5
@@ -126,7 +126,7 @@ class User_Interface:
             detections = sv.Detections.from_ultralytics(result)
             labels = [
                 f"{model.names[class_id]} {confidence:0.2f}"
-                for _, _, confidence, class_id, _ , _ in detections
+                for _, _, confidence, class_id, _, _ in detections
             ]
 
             time_red = time.time()
@@ -144,11 +144,12 @@ class User_Interface:
             # # submit task to thread pool
             # self.executor.submit(self._speak_messages, obstacles_to_speak)
 
-            if(User_Interface.speech_thread == None or not User_Interface.speech_thread.is_alive()):
-                obstacles_to_speak = [obstacle for obstacle in obstacles if obstacle != None and time.time() - obstacle.time_registered < TIME_OUT]
-                User_Interface.speech_thread = threading.Thread(target=self._speak_messages, args=(obstacles_to_speak,))
+            if (User_Interface.speech_thread == None or not User_Interface.speech_thread.is_alive()):
+                obstacles_to_speak = [obstacle for obstacle in obstacles if obstacle != None and time.time(
+                ) - obstacle.time_registered < TIME_OUT]
+                User_Interface.speech_thread = threading.Thread(
+                    target=self._speak_messages, args=(obstacles_to_speak,))
                 User_Interface.speech_thread.start()
-
 
             frame = annotators.bb_annotator.annotate(
                 scene=frame,
@@ -161,10 +162,8 @@ class User_Interface:
                 labels=labels
             )
 
-            
             annotators.zone.trigger(detections=detections)
             frame = annotators.zone_annotator.annotate(scene=frame)
-
 
             cv2.imshow("Sight Sence - Frame", frame)
 

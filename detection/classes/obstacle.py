@@ -4,12 +4,13 @@ URGENT_OBSTACLE_SET = {"car", "bicycle", "bus", "train", "truck"}
 class Obstacle:
 
     # is_not_in_ROI for sorting cuz false comes before true
-    def __init__(self, name, confidence, xyxy, zone_polygon, time):
+    def __init__(self, name, confidence, xyxy, zone_polygon, time, frame_width):
         self.name = name
         self.confidence = confidence
         self.xyxy = xyxy
         self.size = 0
-        self.pos = self.calculate_position(xyxy)
+        self.pos = self.calculate_position(
+            xyxy, frame_width)  # Pass frame width
 
         self.time_registered = time
 
@@ -47,10 +48,15 @@ class Obstacle:
     def __repr__(self):
         return self.__str__()
 
-    def calculate_position(self, bbox):
+    def calculate_position(self, bbox, frame_width):
         x1, _, x2, _ = bbox
-        frame_center = 960  # Assuming the frame width is 1920
-        if x2 < frame_center:
+        frame_center = frame_width / 2
+        # Define a threshold as a percentage of the frame width
+        center_threshold = frame_width * 0.1
+
+        if x1 >= frame_center - center_threshold and x2 <= frame_center + center_threshold:
+            return "center"
+        elif x2 < frame_center - center_threshold:
             return "left"
         else:
             return "right"

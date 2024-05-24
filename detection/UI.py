@@ -133,7 +133,7 @@ class User_Interface:
 
             obstacles = [
                 Obstacle(model.names[class_id],
-                         confidence, xyxy, annotators.zone_polygon, time_red)
+                         confidence, xyxy, annotators.zone_polygon, time_red, frame_width)
                 for xyxy, _, confidence, class_id, _, _ in detections
             ]
 

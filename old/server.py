@@ -9,8 +9,8 @@ from ultralytics import YOLO
 import supervision as sv
 import numpy as np
 
-from detection.filter import filter_objects, Obstacle
-from detection.notify import sort_and_trim_objects
+from backend.detection.filter import filter_objects, Obstacle
+from backend.detection.notify import sort_and_trim_objects
 
 #cell phone and bottle are here just for testing purposes
 OBSTACLE_SET = {"person", "car", "bicycle", "bus", "train", "truck", "bench", "chair", "cell phone", "bottle"}

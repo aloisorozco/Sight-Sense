@@ -1,4 +1,3 @@
-from PIL import Image, ImageTk
 from tkinter import ttk
 from filter import Obstacle
 from ultralytics import YOLO

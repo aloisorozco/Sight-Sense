@@ -10,7 +10,7 @@ function App() {
   return (
     <div className="App">
       <header className="App-header">
-        <h1>Video Stream</h1>
+        <h1>Sight Sense 👓 - Smart Glasses for the Visually Impaired</h1>
         <img src={vide_url} alt="stream" />
       </header>
     </div>

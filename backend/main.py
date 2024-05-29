@@ -1,9 +1,6 @@
-from UI import User_Interface
-import cv2
 import argparse
-from ultralytics import YOLO
-import supervision as sv
-import numpy as np
+import server
+from detection.cv_capture import Capture
 
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="YOLOv8 live")
@@ -17,4 +14,12 @@ def parse_arguments() -> argparse.Namespace:
     return args     
 
 args = parse_arguments()
-ui = User_Interface(args)
+
+camera = Capture(args)
+flask_server = server.Server(camera)
+
+print("Starting Server")
+flask_server.app.run(host='0.0.0.0', port=5500)
+
+# Remove local UI - replacing it with react app
+# ui = User_Interface(args)

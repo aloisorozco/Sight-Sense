@@ -1,0 +1,6 @@
+.view_container {
+    width: 75%; 
+    padding: 20px;
+    background-color: #737070;
+    border-radius: 8px; /* Optional: round the corners */
+}

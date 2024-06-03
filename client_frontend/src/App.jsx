@@ -2,17 +2,15 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios'; //Could be usefull to use axios for future API calls - so keep the import and comment as a reminder
 import './App.css';
 
-function App() {
-  const [frameSrc, setFrameSrc] = useState('');
+import NavBar from './components/nav_bar'
+import ContentContainer from './components/content_container';
 
-  const vide_url = "http://127.0.0.1:5500/video_feed"
+function App() {
 
   return (
     <div className="App">
-      <header className="App-header">
-        <h1>Sight Sense 👓 - Smart Glasses for the Visually Impaired</h1>
-        <img src={vide_url} alt="stream" />
-      </header>
+      <NavBar />
+      <ContentContainer/>
     </div>
   );
 }

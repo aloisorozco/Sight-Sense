@@ -1,0 +1,17 @@
+.nav{
+    display: flex;
+    background-color: #282c34;
+    height: 70px;
+    font-size: calc(10px + 2vmin);
+    color: white;
+    align-items: center;
+}
+
+.container {
+    padding-left: 30px;
+    padding-right: 30px;
+}
+
+.link {
+    font-family: 'Roboto', sans-serif; 
+}

@@ -36,7 +36,7 @@ class Capture():
     def _speak_messages(self, obstacles):
         for obstacle in obstacles:
             self.speech.generate_and_play(obstacle.__str__())
-     
+
 
     def start_capture(self):
             while True:

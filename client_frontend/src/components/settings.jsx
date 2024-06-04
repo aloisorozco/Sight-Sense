@@ -34,6 +34,7 @@ function SettingsScreen(props) {
     }
 
     const stopStream = () => {
+        
         setStart(false)
 
         props.sendData({

@@ -13,10 +13,6 @@ class Server():
     def video_feed():
         return Response(Server._camera.start_capture(), mimetype='multipart/x-mixed-replace; boundary=frame')
     
-    @app.route('/end_capture')
-    def status():
-        return Response(status=200)
-    
     @app.route('/status')
     def status():
         return Response(status=200)

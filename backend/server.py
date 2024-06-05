@@ -23,7 +23,7 @@ class Server():
         
         # busy wait if empty queue
         while(Server._frames.empty()):
-            time.sleep(0.5)
+            time.sleep(1)
         
         Server._mutex.acquire()
         frame = Server._frames.get()

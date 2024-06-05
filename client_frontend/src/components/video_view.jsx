@@ -9,9 +9,9 @@ function MainScreen(props) {
 
     const fecthFrame = useCallback(async () =>{
         
-        if(props.stream_url){
+        if(props.url){
             try{
-                const url = props.stream_url + "/video_feed"
+                const url = props.url + "/video_feed"
                 let res = await axios.get(url, {
                     responseType: 'blob'
                 })

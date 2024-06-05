@@ -9,14 +9,18 @@ import cv2
 import supervision as sv
 import time
 
-class Capture():
+class Capture(threading.Thread):
 
     _CONFIDENCE_THRESHOLD = 0.5
     _TIME_OUT = 2
     _speech_thread = None
 
-    def __init__(self, args) -> None:
+    def __init__(self, args, queue, frames_mutex) -> None:
             
+            threading.Thread.__init__(self)
+            self.queue = queue
+            self.mutex = frames_mutex
+
             frame_width, frame_height = args.webcam_resolution
 
             # change to 1 for webcam - if you have another device connected, otherwise leave at 0 for your default webcam
@@ -32,6 +36,8 @@ class Capture():
 
             self.speech = tts.TTS()
 
+    def run(self):
+        self.start_capture()
 
     def _speak_messages(self, obstacles):
         for obstacle in obstacles:
@@ -40,7 +46,7 @@ class Capture():
 
     def start_capture(self):
             while True:
-
+                
                 succ, frame = self.cap.read()
                 if not succ:
                     print("frame not returned - exiting")
@@ -92,7 +98,10 @@ class Capture():
                 # For server - so we can yield each frame, when the flask API is called
                 _, buffer = cv2.imencode('.jpeg',frame)
                 frame = buffer.tobytes()
-                yield (b'--frame\r\n' b'Content-type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+
+                self.mutex.acquire()
+                self.queue.put(b'--frame\r\n' b'Content-type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+                self.mutex.release()
 
                 # cv2.imshow("Sight Sence - Frame", frame)
 

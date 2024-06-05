@@ -11,7 +11,7 @@ function ContentContainer(){
 
     const handleButtonPress = (data) =>{
         setStreamOk(data.stream_status)
-        setVideoURL(data.vaide_url)
+        setVideoURL(data.stream_url)
     }
     
     return(

@@ -10,9 +10,26 @@ function updateTextInput(event, setter) {
 }
 
 async function checkServerStatus() {
-    let res = await axios.get(VIDEO_URL + "/status")
-    return res === 200
+
+    return axios.get(VIDEO_URL + "/status").then((res) =>{
+        return res
+    }).catch((err) =>{
+        console.log(err)
+        return false
+    })
+
 }
+
+// async function endStream() {
+
+//     return axios.get(VIDEO_URL + "/end_stream").then((res) =>{
+//         return res
+//     }).catch((err) =>{
+//         console.log(err)
+//         return false
+//     })
+
+// }
 
 function SettingsScreen(props) {
 
@@ -23,14 +40,17 @@ function SettingsScreen(props) {
 
     const [start, setStart] = useState(false);
     
-    const startStream = () => {
-        let stat = checkServerStatus()
-        setStart(true)
+    async function startStream(){
+        let stat = await checkServerStatus()
 
-        props.sendData({
-            stream_status: stat,
-            vaide_url: VIDEO_URL,
-        })
+        if(stat){
+            setStart(true)
+
+            props.sendData({
+                stream_status: stat,
+                stream_url: VIDEO_URL,
+            })
+        }
     }
 
     const stopStream = () => {
@@ -39,7 +59,7 @@ function SettingsScreen(props) {
 
         props.sendData({
             stream_status: false,
-            vaide_url: VIDEO_URL,
+            stream_url: VIDEO_URL,
         })
     }
 

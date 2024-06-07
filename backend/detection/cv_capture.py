@@ -9,105 +9,108 @@ import cv2
 import supervision as sv
 import time
 
-class Capture(threading.Thread):
+
+class Capture():
 
     _CONFIDENCE_THRESHOLD = 0.5
     _TIME_OUT = 2
     _speech_thread = None
 
-    def __init__(self, args, queue, frames_mutex) -> None:
-            
-            threading.Thread.__init__(self)
-            self.queue = queue
-            self.mutex = frames_mutex
+    def __init__(self, args, queue = None, frames_mutex = None) -> None:
 
-            frame_width, frame_height = args.webcam_resolution
+        # threading.Thread.__init__(self)
+        # self.queue = queue
+        # self.mutex = frames_mutex
 
-            # change to 1 for webcam - if you have another device connected, otherwise leave at 0 for your default webcam
-            # Capture vide + load model
-            self.cap = cv2.VideoCapture(0)
-            self.model = YOLO("yolov8n.pt")
-            self.model.fuse()
+        frame_width, frame_height = args.webcam_resolution
 
-            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, frame_width)
-            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, frame_height)
+        # change to 1 for webcam - if you have another device connected, otherwise leave at 0 for your default webcam
+        # Capture vide + load model
+        self.cap = cv2.VideoCapture(0)
+        self.model = YOLO("yolov8n.pt")
+        self.model.fuse()
 
-            self.annotators = Annotators(args.webcam_resolution)
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, frame_width)
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, frame_height)
 
-            self.speech = tts.TTS()
+        self.annotators = Annotators(args.webcam_resolution)
 
-    def run(self):
-        self.start_capture()
+        self.speech = tts.TTS()
+
+    # def run(self):
+    #     self.start_capture()
 
     def _speak_messages(self, obstacles):
         for obstacle in obstacles:
             self.speech.generate_and_play(obstacle.__str__())
 
-
     def start_capture(self):
-            while True:
-                
-                succ, frame = self.cap.read()
-                if not succ:
-                    print("frame not returned - exiting")
-                    break  # Break the loop if no frame is returned
+        while True:
 
-                result = self.model(frame, agnostic_nms=True)[0]
-                detections = sv.Detections.from_ultralytics(result)
-                labels = [
-                    f"{self.model.names[class_id]} {confidence:0.2f}"
-                    for _, _, confidence, class_id, _ , _ in detections
-                ]
+            succ, frame = self.cap.read()
+            if not succ:
+                print("frame not returned - exiting")
+                break  # Break the loop if no frame is returned
 
-                time_red = time.time()
+            result = self.model(frame, agnostic_nms=True)[0]
+            detections = sv.Detections.from_ultralytics(result)
+            labels = [
+                f"{self.model.names[class_id]} {confidence:0.2f}"
+                for _, _, confidence, class_id, _, _ in detections
+            ]
 
-                obstacles = [
-                    Obstacle(self.model.names[class_id],
-                            confidence, xyxy, self.annotators.zone_polygon, time_red)
-                    for xyxy, _, confidence, class_id, _, _ in detections
-                ]
+            time_red = time.time()
 
-                # render only objects that are still on screen
-                # time_now = time.time()
-                # obstacles_to_speak = [
-                #     obstacle for obstacle in obstacles if obstacle is not None and time_now - obstacle.time_registered < TIME_OUT]
-                # # submit task to thread pool
-                # self.executor.submit(self._speak_messages, obstacles_to_speak)
+            obstacles = [
+                Obstacle(self.model.names[class_id],
+                         confidence, xyxy, self.annotators.zone_polygon, time_red)
+                for xyxy, _, confidence, class_id, _, _ in detections
+            ]
 
-                if(Capture._speech_thread == None or not Capture._speech_thread.is_alive()):
-                    obstacles_to_speak = [obstacle for obstacle in obstacles if obstacle != None and time.time() - obstacle.time_registered < Capture._TIME_OUT]
-                    Capture._speech_thread = threading.Thread(target=self._speak_messages, args=(obstacles_to_speak,))
-                    Capture._speech_thread.start()
+            # render only objects that are still on screen
+            # time_now = time.time()
+            # obstacles_to_speak = [
+            #     obstacle for obstacle in obstacles if obstacle is not None and time_now - obstacle.time_registered < TIME_OUT]
+            # # submit task to thread pool
+            # self.executor.submit(self._speak_messages, obstacles_to_speak)
 
+            # if (Capture._speech_thread == None or not Capture._speech_thread.is_alive()):
+            #     obstacles_to_speak = [obstacle for obstacle in obstacles if obstacle != None and time.time(
+            #     ) - obstacle.time_registered < Capture._TIME_OUT]
+            #     Capture._speech_thread = threading.Thread(
+            #         target=self._speak_messages, args=(obstacles_to_speak,))
+            #     Capture._speech_thread.start()
 
-                frame = self.annotators.bb_annotator.annotate(
-                    scene=frame,
-                    detections=detections
-                )
+            frame = self.annotators.bb_annotator.annotate(
+                scene=frame,
+                detections=detections
+            )
 
-                frame = self.annotators.label_annotator.annotate(
-                    scene=frame,
-                    detections=detections,
-                    labels=labels
-                )
+            frame = self.annotators.label_annotator.annotate(
+                scene=frame,
+                detections=detections,
+                labels=labels
+            )
 
-                
-                self.annotators.zone.trigger(detections=detections)
-                frame = self.annotators.zone_annotator.annotate(scene=frame)
+            self.annotators.zone.trigger(detections=detections)
+            frame = self.annotators.zone_annotator.annotate(scene=frame)
 
-                # For server - so we can yield each frame, when the flask API is called
-                _, buffer = cv2.imencode('.jpeg',frame)
-                frame = buffer.tobytes()
+            # For server - so we can yield each frame, when the flask API is called
+            _, buffer = cv2.imencode('.jpeg', frame)
+            frame = buffer.tobytes()
 
-                self.mutex.acquire()
-                self.queue.put(b'--frame\r\n' b'Content-type: image/jpeg\r\n\r\n' + frame + b'\r\n')
-                self.mutex.release()
+            # self.mutex.acquire()
+            # self.queue.put(
+            #     b'--frame\r\n' b'Content-type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+            # self.mutex.release()
 
-                # cv2.imshow("Sight Sence - Frame", frame)
+            yield frame
 
-                # if cv2.waitKey(1) & 0xFF == ord('q'):
-                #     break
+            # cv2.imshow("Sight Sence - Frame", frame)
 
-            # Release the capture object and close all windows
-            self.cap.release()
-            cv2.destroyAllWindows()
+            # if cv2.waitKey(1) & 0xFF == ord('q'):
+            #     break
+
+        # Release the capture object and close all windows
+        self.cap.release()
+        cv2.destroyAllWindows()

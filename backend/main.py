@@ -1,8 +1,7 @@
 import argparse
-import server
-import queue
-import threading
 from detection.cv_capture import Capture
+# from waitress import serve
+from server import Server
 
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="YOLOv8 live")
@@ -15,15 +14,17 @@ def parse_arguments() -> argparse.Namespace:
     args = parser.parse_args()
     return args     
 
+if __name__ == "__main__":
+    # frames = queue.Queue()
+    # frames_mutex = threading.Semaphore()
 
-frames = queue.Queue()
-frames_mutex = threading.Semaphore()
+    args = parse_arguments()
 
-args = parse_arguments()
+    camera = Capture(args)
+    flask_server = Server(camera)
 
-camera = Capture(args, frames, frames_mutex)
-flask_server = server.Server(camera, frames, frames_mutex)
+    app = flask_server.app
 
-print("Starting Server")
-flask_server.app.run(host='0.0.0.0', port=5500)
+    print("Starting Server")
 
+    app.run(host='0.0.0.0', port=5500)

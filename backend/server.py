@@ -18,19 +18,14 @@ class Server():
     })
 
     _camera = None
-    _mutex = None
-    _frames = None
 
-    def __init__(self, camera, frames = None, frames_mutex = None) -> None:
-
-        # Server._mutex = frames_mutex
-        # Server._frames = frames
+    def __init__(self, camera) -> None:
         Server._camera = camera
     
 
-    # Define a health check handler
     async def status(request):
         return web.Response(status=200)
+
 
     async def capture_and_send(self):
         for encoded_frame in Server._camera.start_capture():

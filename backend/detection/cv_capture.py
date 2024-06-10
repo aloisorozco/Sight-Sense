@@ -17,11 +17,7 @@ class Capture():
     _TIME_OUT = 2
     _speech_thread = None
 
-    def __init__(self, args, queue = None, frames_mutex = None) -> None:
-
-        # threading.Thread.__init__(self)
-        # self.queue = queue
-        # self.mutex = frames_mutex
+    def __init__(self, args) -> None:
 
         frame_width, frame_height = args.webcam_resolution
 
@@ -39,9 +35,6 @@ class Capture():
         self.speech = tts.TTS()
 
         self.end_stream = False
-
-    # def run(self):
-    #     self.start_capture()
 
     def _speak_messages(self, obstacles):
         for obstacle in obstacles:
@@ -105,11 +98,6 @@ class Capture():
 
             self.annotators.zone.trigger(detections=detections)
             frame = self.annotators.zone_annotator.annotate(scene=frame)
-
-            # self.mutex.acquire()
-            # self.queue.put(
-            #     b'--frame\r\n' b'Content-type: image/jpeg\r\n\r\n' + frame + b'\r\n')
-            # self.mutex.release()
 
             yield self.encode_image(frame)
 

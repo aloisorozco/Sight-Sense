@@ -1,7 +1,6 @@
 import argparse
 from aiohttp import web
 from detection.cv_capture import Capture
-# from waitress import serve
 from server import Server
 
 def parse_arguments() -> argparse.Namespace:
@@ -16,8 +15,6 @@ def parse_arguments() -> argparse.Namespace:
     return args     
 
 if __name__ == "__main__":
-    # frames = queue.Queue()
-    # frames_mutex = threading.Semaphore()
 
     PORT = 5500
     IP = '127.0.0.1'
@@ -27,7 +24,6 @@ if __name__ == "__main__":
     camera = Capture(args)
     server = Server(camera)
 
-    app = server.app
     sio = server.sio
 
     print(f' ------------- Staring Server ------------- PORT: {PORT}')

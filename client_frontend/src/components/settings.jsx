@@ -21,16 +21,16 @@ async function checkServerStatus() {
 
 }
 
-// async function endStream() {
+async function endStream() {
 
-//     return axios.get(VIDEO_URL + "/end_stream").then((res) =>{
-//         return res
-//     }).catch((err) =>{
-//         console.log(err)
-//         return false
-//     })
+    return axios.get(VIDEO_URL + "end_stream").then((res) =>{
+        return res
+    }).catch((err) =>{
+        console.log(err)
+        return false
+    })
 
-// }
+}
 
 function SettingsScreen(props) {
 
@@ -38,7 +38,6 @@ function SettingsScreen(props) {
     const [updateRate, setUpdateRate] = useState(0);
     const [messagePerUpdate, setMessagePerUpdate] = useState(0);
     const [hazardObjectThreshold, setHazardObjectSizeThreshold] = useState(0);
-    const [socketInstance, setSocketInstance] = useState()
 
     const [start, setStart] = useState(false);
 
@@ -49,21 +48,26 @@ function SettingsScreen(props) {
             setStart(true)
             
             const socket = io(VIDEO_URL)
-            setSocketInstance(socket);
-            
             socket.on("frame", (data) => {
                 console.log('frame recieved')
                 props.sendData({
                     frame: data,
+                    start: true,
                 })
             })
         }
     }
 
-    const stopStream = () => {
+    async function stopStream() {
+        let end = await endStream()
 
-        // setStart(false)
-
+        if(end){
+            setStart(false)
+            props.sendData({
+                frame: null,
+                start: false,
+            })
+        }
     }
 
     return (

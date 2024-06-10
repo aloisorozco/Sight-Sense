@@ -7,14 +7,16 @@ import NavBar from './nav_bar'
 function ContentContainer(){
 
     const [frame, setFrame] = useState()
+    const [isStreaming, setIsStreaming] = useState()
 
     const handleButtonPress = (data) =>{
         setFrame(data.frame)
+        setIsStreaming(data.start)
     }
     
     return(
         <div className="App-views-container">
-            <MainScreen frame={frame}/>
+            <MainScreen frame={frame} start={isStreaming}/>
             <SettingsScreen sendData={handleButtonPress}/>
         </div>
     )

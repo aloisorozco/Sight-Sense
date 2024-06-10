@@ -38,6 +38,8 @@ class Capture():
 
         self.speech = tts.TTS()
 
+        self.end_stream = False
+
     # def run(self):
     #     self.start_capture()
 
@@ -49,9 +51,12 @@ class Capture():
         _, buffer = cv2.imencode('.jpg', image)
         jpg_as_text = base64.b64encode(buffer).decode('utf-8')
         return jpg_as_text
+    
+    def set_end_stream(self, val):
+        self.end_stream = val
 
     def start_capture(self):
-        while True:
+        while not self.end_stream:
 
             succ, frame = self.cap.read()
             if not succ:

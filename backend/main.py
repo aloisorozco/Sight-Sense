@@ -1,10 +1,8 @@
 import argparse
-import eventlet
-import eventlet.wsgi
+from aiohttp import web
 from detection.cv_capture import Capture
 # from waitress import serve
 from server import Server
-import threading
 
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="YOLOv8 live")
@@ -27,12 +25,10 @@ if __name__ == "__main__":
     args = parse_arguments()
 
     camera = Capture(args)
-    flask_server = Server(camera)
+    server = Server(camera)
 
-    app = flask_server.app
-    sio = flask_server.sio
-    
-    capure_thread = sio.start_background_task(flask_server.capture_and_send)
-    
+    app = server.app
+    sio = server.sio
+
     print(f' ------------- Staring Server ------------- PORT: {PORT}')
-    eventlet.wsgi.server(eventlet.listen((IP, PORT)), app)
+    web.run_app(server.init_app(), host=IP, port=PORT)

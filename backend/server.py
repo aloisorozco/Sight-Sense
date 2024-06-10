@@ -1,14 +1,21 @@
-from flask import Flask, Response, request, jsonify
-from flask_cors import CORS
 import socketio
-import eventlet
-import eventlet.wsgi
+from aiohttp import web
+import aiohttp_cors
 class Server():
 
-    app = Flask(__name__)
-    sio = socketio.Server(cors_allowed_origins='*')
-    app.wsgi_app = socketio.WSGIApp(sio, app.wsgi_app)
-    CORS(app)
+    app = web.Application()
+    sio = socketio.AsyncServer(cors_allowed_origins='*', async_mode='aiohttp', async_handlers=True)
+
+    sio.attach(app)
+
+    # Set up CORS for aiohttp
+    cors = aiohttp_cors.setup(app, defaults={
+        "*": aiohttp_cors.ResourceOptions(
+                allow_credentials=True,
+                expose_headers="*",
+                allow_headers="*",
+            )
+    })
 
     _camera = None
     _mutex = None
@@ -19,25 +26,40 @@ class Server():
         # Server._mutex = frames_mutex
         # Server._frames = frames
         Server._camera = camera
+    
 
+    # Define a health check handler
+    async def status(request):
+        return web.Response(status=200)
 
-    def capture_and_send(self):
+    async def capture_and_send(self):
         for encoded_frame in Server._camera.start_capture():
-            Server.sio.emit('frame', encoded_frame)
-            Server.sio.sleep(0.01)
+            await Server.sio.emit('frame', encoded_frame)
+            await Server.sio.sleep(0.01)
 
+            
     @sio.on('connect')
-    def connect(sid, environ):
+    async def connect(sid, environ):
         print('Client connected:', sid)
+        await Server.sio.emit('reply', f"status: 200")
 
     @sio.on('disconnect')
-    def disconnect(sid):
+    async def disconnect(sid):
         print('Client disconnected:', sid)
         
-    @app.route('/status')
-    def status():
-        return Response(status=200)
     
-    @app.route('/end_stream')
-    def end_stream():
-        return Response(status=200)
+    @sio.on('end_stream')
+    async def end_stream(sid):
+        Server._camera.set_end_stream(True)
+        print("Ending Stream for all connected clients")
+        await Server.sio.emit('reply', f"status: 200")
+
+    
+    # Factory app init to start backround process
+    async def init_app(self):
+        Server.sio.start_background_task(Server.capture_and_send, self)
+        return Server.app
+
+    # Add route to CORS
+    status_route = app.router.add_get('/status', status)
+    cors.add(status_route)

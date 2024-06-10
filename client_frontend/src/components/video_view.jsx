@@ -9,7 +9,7 @@ function MainScreen(props) {
 
     useEffect(() =>{
 
-        if(props.frame){
+        if(props.frame && props.start){
             setFrame(props.frame)
         }
     
@@ -18,7 +18,7 @@ function MainScreen(props) {
 
     return (
         <div className={`shadow mr-auto ${classes.view_container}`}>
-            {props.frame ? <img src={`data:image/jpeg;base64,${frame}`} alt="Stream Loading..." /> : <span>Server is not on/ some issue arrised</span>}
+            {props.start ? <img src={`data:image/jpeg;base64,${frame}`} alt="Stream Loading..." /> : <span>Server is not on/ some issue arrised</span>}
         </div>
     )
 }

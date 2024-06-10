@@ -1,12 +1,15 @@
 from flask import Flask, Response, request, jsonify
 from flask_cors import CORS
-from flask_socketio import SocketIO, emit
+import socketio
+import eventlet
+import eventlet.wsgi
 class Server():
 
     app = Flask(__name__)
-    socketio = SocketIO(app, cors_allowed_origins="*")
-    
-    CORS(app) 
+    sio = socketio.Server(cors_allowed_origins='*')
+    app.wsgi_app = socketio.WSGIApp(sio, app.wsgi_app)
+    CORS(app)
+
     _camera = None
     _mutex = None
     _frames = None
@@ -17,19 +20,20 @@ class Server():
         # Server._frames = frames
         Server._camera = camera
 
-    @socketio.on("connect")
-    def connected():
-        """event listener when client connects to the server"""
-        print(request.sid)
-        print("client has connected")
-        emit("connect",{"data":f"id: {request.sid} is connected"})
 
-    @socketio.on('frame')
-    def model_stream_connection():
-        for frame in Server._camera.start_capture():
-            Server.socketio.emit('frame', frame)
+    def capture_and_send(self):
+        for encoded_frame in Server._camera.start_capture():
+            Server.sio.emit('frame', encoded_frame)
+            Server.sio.sleep(0.01)
 
-    
+    @sio.on('connect')
+    def connect(sid, environ):
+        print('Client connected:', sid)
+
+    @sio.on('disconnect')
+    def disconnect(sid):
+        print('Client disconnected:', sid)
+        
     @app.route('/status')
     def status():
         return Response(status=200)

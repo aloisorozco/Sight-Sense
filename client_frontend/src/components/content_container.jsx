@@ -6,17 +6,15 @@ import NavBar from './nav_bar'
 
 function ContentContainer(){
 
-    const [streamOk, setStreamOk] = useState(false)
-    const [videoURL, setVideoURL] = useState("")
+    const [frame, setFrame] = useState()
 
     const handleButtonPress = (data) =>{
-        setStreamOk(data.stream_status)
-        setVideoURL(data.stream_url)
+        setFrame(data.frame)
     }
     
     return(
         <div className="App-views-container">
-            <MainScreen stream_stat={streamOk} url={videoURL} />
+            <MainScreen frame={frame}/>
             <SettingsScreen sendData={handleButtonPress}/>
         </div>
     )

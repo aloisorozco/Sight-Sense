@@ -8,6 +8,7 @@ import threading
 import cv2
 import supervision as sv
 import time
+import base64
 
 
 class Capture():
@@ -44,6 +45,11 @@ class Capture():
         for obstacle in obstacles:
             self.speech.generate_and_play(obstacle.__str__())
 
+    def encode_image(self, image):
+        _, buffer = cv2.imencode('.jpg', image)
+        jpg_as_text = base64.b64encode(buffer).decode('utf-8')
+        return jpg_as_text
+
     def start_capture(self):
         while True:
 
@@ -52,7 +58,7 @@ class Capture():
                 print("frame not returned - exiting")
                 break  # Break the loop if no frame is returned
 
-            result = self.model(frame, agnostic_nms=True)[0]
+            result = self.model(frame, agnostic_nms=True, verbose=False)[0]
             detections = sv.Detections.from_ultralytics(result)
             labels = [
                 f"{self.model.names[class_id]} {confidence:0.2f}"
@@ -95,16 +101,12 @@ class Capture():
             self.annotators.zone.trigger(detections=detections)
             frame = self.annotators.zone_annotator.annotate(scene=frame)
 
-            # For server - so we can yield each frame, when the flask API is called
-            _, buffer = cv2.imencode('.jpeg', frame)
-            frame = buffer.tobytes()
-
             # self.mutex.acquire()
             # self.queue.put(
             #     b'--frame\r\n' b'Content-type: image/jpeg\r\n\r\n' + frame + b'\r\n')
             # self.mutex.release()
 
-            yield frame
+            yield self.encode_image(frame)
 
             # cv2.imshow("Sight Sence - Frame", frame)
 

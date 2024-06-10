@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import io from 'socket.io-client';
 import classes from "./main_view.module.css"
 import 'bootstrap/dist/css/bootstrap.min.css';
 
-const VIDEO_URL = "http://127.0.0.1:5500"
+const VIDEO_URL = "http://127.0.0.1:5500/"
 
 function updateTextInput(event, setter) {
     setter(event.target.value);
@@ -11,9 +12,9 @@ function updateTextInput(event, setter) {
 
 async function checkServerStatus() {
 
-    return axios.get(VIDEO_URL + "/status").then((res) =>{
+    return axios.get(VIDEO_URL + "status").then((res) => {
         return res
-    }).catch((err) =>{
+    }).catch((err) => {
         console.log(err)
         return false
     })
@@ -37,30 +38,32 @@ function SettingsScreen(props) {
     const [updateRate, setUpdateRate] = useState(0);
     const [messagePerUpdate, setMessagePerUpdate] = useState(0);
     const [hazardObjectThreshold, setHazardObjectSizeThreshold] = useState(0);
+    const [socketInstance, setSocketInstance] = useState()
 
     const [start, setStart] = useState(false);
-    
-    async function startStream(){
+
+    async function startStream() {
         let stat = await checkServerStatus()
 
-        if(stat){
+        if (stat) {
             setStart(true)
-
-            props.sendData({
-                stream_status: stat,
-                stream_url: VIDEO_URL,
+            
+            const socket = io(VIDEO_URL)
+            setSocketInstance(socket);
+            
+            socket.on("frame", (data) => {
+                console.log('frame recieved')
+                props.sendData({
+                    frame: data,
+                })
             })
         }
     }
 
     const stopStream = () => {
-        
-        setStart(false)
 
-        props.sendData({
-            stream_status: false,
-            stream_url: VIDEO_URL,
-        })
+        // setStart(false)
+
     }
 
     return (
@@ -87,9 +90,9 @@ function SettingsScreen(props) {
             </div>
 
 
-            {start ? 
-                <button onClick={stopStream} type="button" className={`btn btn-primary btn-lg ${classes.apply_btn}`}>Stop</button>:
-                <button onClick={startStream} type="button" className={`btn btn-primary btn-lg ${classes.apply_btn}`}>Apply & Start</button> }
+            {start ?
+                <button onClick={stopStream} type="button" className={`btn btn-primary btn-lg ${classes.apply_btn}`}>Stop</button> :
+                <button onClick={startStream} type="button" className={`btn btn-primary btn-lg ${classes.apply_btn}`}>Apply & Start</button>}
 
         </div>
     )

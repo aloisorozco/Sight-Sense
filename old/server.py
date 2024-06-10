@@ -118,16 +118,16 @@ def server_program():
         
         obstacles = sort_and_trim_objects(filter_objects(obstacles, OBSTACLE_SET))
 
-        print(obstacles)
+        # print(obstacles)
 
-        '''if len(obstacles) > 0 and time.time() > timed_out:
-            print(obstacles)
-            timed_out = time.time() + 5'''
+        # if len(obstacles) > 0 and time.time() > timed_out:
+        #     print(obstacles)
+        #     timed_out = time.time() + 5
 
         zone.trigger(detections=detections)
         frame = zone_annotator.annotate(scene=frame)  
 
-        print(frame) 
+        # print(frame) 
 
         # Pickle the object and send it to the server
         data_string = pickle.dumps(frame)

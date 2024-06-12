@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import io from 'socket.io-client';
 import classes from "./main_view.module.css"
@@ -21,15 +21,23 @@ async function checkServerStatus() {
 
 }
 
-async function endStream() {
+async function endStream(socket) {
 
-    return axios.get(VIDEO_URL + "end_stream").then((res) =>{
-        return res
-    }).catch((err) =>{
-        console.log(err)
-        return false
+    return new Promise((resolve, reject) =>{
+        socket.emit('end_stream')
+        socket.on('stream_exit_res', (data) =>{
+            resolve(data)
+        })
     })
 
+}
+
+async function joinStream(socket){
+
+    return new Promise((resolve, reject) =>{
+        socket.emit('join_stream')
+        socket.on('join_stream_confirmation', (data) => {resolve(data)})
+    }) 
 }
 
 function SettingsScreen(props) {
@@ -38,35 +46,58 @@ function SettingsScreen(props) {
     const [updateRate, setUpdateRate] = useState(0);
     const [messagePerUpdate, setMessagePerUpdate] = useState(0);
     const [hazardObjectThreshold, setHazardObjectSizeThreshold] = useState(0);
-
+    const [webSocket, setWebSocket] = useState(null)
     const [start, setStart] = useState(false);
+
+    useEffect(()=>{
+        if(!webSocket){
+            const socket = io(VIDEO_URL)
+            setWebSocket(socket)
+
+            return () => {
+                socket.disconnect()
+            }
+        }
+    }, [])
 
     async function startStream() {
         let stat = await checkServerStatus()
 
         if (stat) {
             setStart(true)
-            
-            const socket = io(VIDEO_URL)
-            socket.on("frame", (data) => {
-                console.log('frame recieved')
-                props.sendData({
-                    frame: data,
-                    start: true,
-                })
+
+            let res = null
+            await joinStream(webSocket).then((data) =>{
+                res = data
             })
+
+            if(res == 200){
+
+                webSocket.on("frame", (data) => {
+                    console.log('frame recieved')
+                    props.sendData({
+                        frame: data,
+                        start: true,
+                    })
+                })
+
+            }else{
+                console.log("Cant connect to serwer - I am going to break my monitaur I swaer")
+            }
         }
     }
 
     async function stopStream() {
-        let end = await endStream()
+        let end = await endStream(webSocket)
 
-        if(end){
+        if(end == 200){
             setStart(false)
             props.sendData({
                 frame: null,
                 start: false,
             })
+        }else{
+            console.log("Issue disconnecting from the stream - ch-ch-chat is this real??")
         }
     }
 

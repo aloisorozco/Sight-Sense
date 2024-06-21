@@ -1,8 +1,8 @@
 import '../App.css';
 import React, { useState } from 'react';
-import MainScreen from './video_view';
-import SettingsScreen from './settings'
-import NavBar from './nav_bar'
+import MainScreen from '../components/video_view';
+import SettingsScreen from '../components/settings'
+import NavBar from '../components/nav_bar'
 
 function ContentContainer(){
 

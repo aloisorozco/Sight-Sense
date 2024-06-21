@@ -4,7 +4,7 @@ import io from 'socket.io-client';
 import classes from "./main_view.module.css"
 import 'bootstrap/dist/css/bootstrap.min.css';
 
-const VIDEO_URL = "http://127.0.0.1:5500/"
+const VIDEO_URL = process.env.REACT_APP_VIDEO_END_POINT
 
 function updateTextInput(event, setter) {
     setter(event.target.value);

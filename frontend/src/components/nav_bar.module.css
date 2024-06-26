@@ -3,8 +3,12 @@
     background-color: #282c34;
     height: 70px;
     font-size: calc(10px + 2vmin);
-    color: white;
     align-items: center;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 1000;
 }
 
 .container {

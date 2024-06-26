@@ -4,13 +4,13 @@ import classes from './nav_bar.module.css';
 
 function NavBar() {
     return (
-        <nav className={`navbar navbar-expand-lg navbar-dark bg-dark shadow ${classes.nav}`}>
+        <nav className={`navbar navbar-expand-lg navbar-dark bg-dark shadow fixed-top" ${classes.nav}`}>
             <div className={`container-fluid ${classes.container}`}>
                 <div className="navbar-brand">
                     <h1>👓</h1>
                 </div>
                 <div>
-                    <a className={`nav-link ${classes.link}`}>About</a>
+                    <button type="button" className={`btn btn-light ${classes.link}`}>Log-In</button>
                 </div>
             </div>
         </nav>

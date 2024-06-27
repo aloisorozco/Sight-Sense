@@ -3,7 +3,7 @@
 .img {
     width: 50%;
     height: 50%;
-    margin-right: 5%;
+    margin: 2%;
 }
 
 .text span:first-of-type {
@@ -36,13 +36,18 @@
     flex-direction: column;
 }
 
+.btns{
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+}
+
 .parentSide{
     display: flex;
     flex-direction: row;
     justify-content: center;
-    align-items: center; /* Align items horizontally and vertically */
-    margin-left: 5%;
-    margin-right: 5%; /* Adjust margin for spacing */
+    align-items: center;
 }
 
 .mainButtons{

@@ -24,18 +24,20 @@ function LandingPage() {
                 <span>Providing a reliable, lightweight and cheap, open source alternative to enjoy AI powered doorbell without cashing out on Amazon ;)</span>
             </div>
 
-            <div className={`${classes.parentSide}`}>
+            <div className={`${classes.btns}`}>
                     <button type="button" onClick={redirectGit} className={`btn btn-primary btn-lg ${classes.mainButtons}`}>Repo</button>
                     <button type="button" onClick={redirectInfo} className={`btn btn-outline-secondary btn-lg ${classes.mainButtons}`}>More Details</button>
                 
             </div>
-        
-            <div className={`${classes.parentSide}`}>
-                <img src={first_img} alt="sad hamster" className={`rounded float-left img-fluid ${classes.img}`}/>
 
+            <div>
+                <img src={first_img} alt="sad hamster" className={`rounded float-left img-fluid ${classes.img}`}/>
+            </div>
+           
+            <div className={`${classes.parent}`}>
                 <div className={`${classes.text} ${classes.textLeft}`}>
                     <span className={`${classes.titleText}`}>Smart Security, Featherlight Performance</span>
-                    <span>Utilising the lightweight and fine-tuned YoloV8 model, this doorbell runs natively on all devices. This means, you don't have to worry about your data being streamed to the cloud for computing. Not only is your property safe, but so is your digital privacy</span>
+                    <span>Utilising the lightweight and fine-tuned YoloV8 model, this doorbell runs natively on all devices. This means, you don't have to worry about your data being streamed to the cloud for computing. Not only is your property safe, but so is your digital privacy.</span>
                 </div>
             </div>
         </div>

@@ -3,6 +3,8 @@ from aiohttp import web
 from detection.cv_capture import Capture
 from server import Server
 
+# TODO: use mediapipe to render face mesh - but only fire the model when YOLO detects a person (no wasting resources). Then, ask the user to move the face around to make sure the person is real and not a photo.
+
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="YOLOv8 live")
     parser.add_argument(

@@ -1,19 +1,46 @@
 import cv2
-import mediapipe as mp
-
-import mediapipe.python.solutions.drawing_styles as drawing_styles
-import mediapipe.python.solutions.drawing_utils as drawing_utils
 import mediapipe.python.solutions.face_mesh as face_mesh
 
-mp_drawing = drawing_utils
-mp_drawing_styles = drawing_styles
-mp_face_mesh = face_mesh
+def calc_movement(landmark, prev_coords):
+    # lets do blink detection - great ressource: https://peerj.com/articles/cs-943/
+    pass
 
+def draw(landmark_ids, coords, frame, cap):
+
+    coords_dict = {}
+    frame_w = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+    frame_h = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+
+    # goind from normalised coords to frame coords
+    for i in landmark_ids:
+        x_coord = int(coords[i].x * frame_w)
+        y_coord = int(coords[i].y * frame_h)
+        coords_dict[i] = (x_coord, y_coord)
+
+    for _, coord in coords_dict.items():
+        cv2.circle(frame, coord, radius=1, color=(0, 0, 255), thickness=4)
+
+def getUniqueLandmark(landmarks):
+    landmark_set = set()
+
+    for l in landmarks:
+        landmark_set.add(l[0])
+
+    return list(landmark_set)
+
+mp_face_mesh = face_mesh
 cap = cv2.VideoCapture(0)
-draw_spec = mp_drawing.DrawingSpec(thickness=1, circle_radius=1)
+
+leye_indeces = mp_face_mesh.FACEMESH_LEFT_EYE
+reye_indeces = mp_face_mesh.FACEMESH_RIGHT_EYE
+face = mp_face_mesh.FACEMESH_FACE_OVAL
+
+leye_indeces = getUniqueLandmark(leye_indeces)
+reye_indeces = getUniqueLandmark(reye_indeces)
+face = getUniqueLandmark(face)
 
 with mp_face_mesh.FaceMesh(
-        max_num_faces=1,
+        max_num_faces=1, 
         refine_landmarks=True,
         min_detection_confidence=0.5,
         min_tracking_confidence=0.5) as face_mesh:
@@ -30,21 +57,16 @@ with mp_face_mesh.FaceMesh(
             if not succ:
                 break
 
-            frmae = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             results = face_mesh.process(frame)
             frame.flags.writeable = True
 
-            print(results.multi_face_landmarks)
-
-            if results.multi_face_landmarks:
+            if results.multi_face_landmarks:    
+                
                 for face_landmarks in results.multi_face_landmarks:
-                    mp_drawing.draw_landmarks(
-                        image=frame,
-                        landmark_list=face_landmarks,
-                        connections=mp_face_mesh.FACEMESH_CONTOURS,
-                        landmark_drawing_spec=None,
-                        connection_drawing_spec=mp_drawing_styles
-                        .get_default_face_mesh_contours_style())
+                    lms = face_landmarks.landmark
+                    draw(leye_indeces, lms, frame, cap)
+                    draw(reye_indeces, lms, frame, cap)
+                    draw(face, lms, frame, cap)
 
             cv2.imshow('Frame', frame)
             if cv2.waitKey(1) & 0xFF == ord('q'):

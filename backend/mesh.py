@@ -8,17 +8,21 @@ rEAR = None
 r_eids = [33, 160, 158, 155, 153, 144]
 l_eids = [382, 384, 387, 263, 373, 380]
 
+EAR_THRESHOLD = 0.2
+TEMPORAL_WINDOW = 3
+
+blink_counter = 0
+total_blinks = 0
+
 def calc_movement(coords_dict, ids_to_get):
     # lets do blink detection - great ressource: https://peerj.com/articles/cs-943/
 
     filtered_coords = {}
-
     for index, i in enumerate(ids_to_get):
         filtered_coords[index + 1] = coords_dict[i]
 
-    #ear = (abs(filtered_coords[2][1] - filtered_coords[6][1]) + abs(filtered_coords[3][1] - filtered_coords[5][1])) // (2 * abs(filtered_coords[]))
-
-    return
+    ear = (abs(filtered_coords[2][1] - filtered_coords[6][1]) + abs(filtered_coords[3][1] - filtered_coords[5][1])) / (2 * abs(filtered_coords[1][0] - filtered_coords[4][0]))
+    return ear
 
 def draw(landmark_ids, coords, frame, cap):
 
@@ -83,13 +87,25 @@ with mp_face_mesh.FaceMesh(
                     lms = face_landmarks.landmark
         
                     raw_coords_dict = draw(leye_indeces, lms, frame, cap)
-                    #calc_movement(raw_coords_dict, l_eids)
+                    rEAR = calc_movement(raw_coords_dict, l_eids)
                     
                     raw_coords_dict = draw(reye_indeces, lms, frame, cap)
-                    #calc_movement(raw_coords_dict, r_eids)
+                    lEAR = calc_movement(raw_coords_dict, r_eids)
 
-                    # we need to calc here for the eye movement
                     draw(face, lms, frame, cap)
+
+                    avg_EAR = (rEAR + lEAR) / 2
+                    
+                    if avg_EAR < EAR_THRESHOLD:
+                        blink_counter += 1
+
+                    else: 
+                        if blink_counter >= TEMPORAL_WINDOW:
+                            total_blinks += 1
+
+                        blink_counter = 0
+                        print(f'---------------------------------- Total Blinks {total_blinks} ----------------------------------')
+
 
             cv2.imshow('Frame', frame)
             if cv2.waitKey(1) & 0xFF == ord('q'):

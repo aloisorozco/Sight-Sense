@@ -1,5 +1,6 @@
 from ultralytics import YOLO
 from detection.annotators import Annotators
+from detection.mesh import FaceMesh
 
 from detection.classes.obstacle import Obstacle
 import detection.audio.tts as tts
@@ -32,9 +33,11 @@ class Capture():
 
         self.annotators = Annotators(args.webcam_resolution)
 
-        self.speech = tts.TTS()
-
         self.end_stream = False
+        
+        # Load TTS and FaceMesh models
+        # self.speech = tts.TTS()
+        self.face_mesh = FaceMesh(self.cap)
 
     def _speak_messages(self, obstacles):
         for obstacle in obstacles:
@@ -59,17 +62,17 @@ class Capture():
             result = self.model(frame, agnostic_nms=True, verbose=False)[0]
             detections = sv.Detections.from_ultralytics(result)
             labels = [
-                f"{self.model.names[class_id]} {confidence:0.2f}"
-                for _, _, confidence, class_id, _, _ in detections
+                f"{self.model.names[class_id]}"
+                for _, _, _, class_id, _, _ in detections
             ]
 
-            time_red = time.time()
+            # time_red = time.time()
 
-            obstacles = [
-                Obstacle(self.model.names[class_id],
-                         confidence, xyxy, self.annotators.zone_polygon, time_red)
-                for xyxy, _, confidence, class_id, _, _ in detections
-            ]
+            # obstacles = [
+            #     Obstacle(self.model.names[class_id],
+            #              confidence, xyxy, self.annotators.zone_polygon, time_red)
+            #     for xyxy, _, confidence, class_id, _, _ in detections
+            # ]
 
             # render only objects that are still on screen
             # time_now = time.time()
@@ -98,6 +101,9 @@ class Capture():
 
             self.annotators.zone.trigger(detections=detections)
             frame = self.annotators.zone_annotator.annotate(scene=frame)
+
+            if("person" in labels):
+                self.face_mesh.process_frame_face_mesh(frame)
 
             yield self.encode_image(frame)
 

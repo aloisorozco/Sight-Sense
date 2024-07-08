@@ -131,3 +131,4 @@ class Capture():
         self.cap.release()
         cv2.destroyAllWindows()
         thread_pool.shutdown()
+        self.face_mesh.ptp()

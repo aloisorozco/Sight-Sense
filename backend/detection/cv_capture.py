@@ -130,3 +130,4 @@ class Capture():
         # Release the capture object and close all windows
         self.cap.release()
         cv2.destroyAllWindows()
+        thread_pool.shutdown()

@@ -34,7 +34,7 @@ class FaceMesh():
                                                 min_detection_confidence=0.7,
                                                 min_tracking_confidence=0.5)
         
-    def pull_the_plug(self):
+    def ptp(self):
         if(self.face_mesh_model):
             self.face_mesh_model.close()
         else:
@@ -52,9 +52,8 @@ class FaceMesh():
                filtered_coords[5][1])) / (2 * abs(filtered_coords[1][0] - filtered_coords[4][0]))
         return ear
 
-    def _draw(self, landmark_ids, coords, frame, cap):
+    def _process_coords(self, landmark_ids, coords, frame, cap, coords_to_annotate, coords_dict = {}):
 
-        coords_dict = {}
         frame_w = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
         frame_h = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
 
@@ -62,12 +61,17 @@ class FaceMesh():
         for i in landmark_ids:
             x_coord = int(coords[i].x * frame_w)
             y_coord = int(coords[i].y * frame_h)
-            coords_dict[i] = (x_coord, y_coord)
+            coord_tuple = (x_coord, y_coord)
 
-        for _, coord in coords_dict.items():
-            cv2.circle(frame, coord, radius=1, color=(0, 0, 255), thickness=4)
+            coords_dict[i] = coord_tuple
+            coords_to_annotate.append(coord_tuple)
 
         return coords_dict
+    
+    def draw(self, frame, coords):
+        if(coords):
+            for coord in coords:
+                cv2.circle(frame, coord, radius=1, color=(0, 0, 255), thickness=4)
 
     def _get_unique_landmark(self, landmarks):
         landmark_set = set()
@@ -82,18 +86,20 @@ class FaceMesh():
             results = self.face_mesh_model.process(frame)
             frame.flags.writeable = True
 
+            coords_to_annotate = []
+
             if results.multi_face_landmarks:
 
                 for face_landmarks in results.multi_face_landmarks:
                     lms = face_landmarks.landmark
 
-                    raw_coords_dict = self._draw(self.leye_indeces, lms, frame, self.cap)
+                    raw_coords_dict = self._process_coords(self.leye_indeces, lms, frame, self.cap, coords_to_annotate)
                     rEAR = self._calc_movement(raw_coords_dict, FaceMesh._L_EIDS)
 
-                    raw_coords_dict = self._draw(self.reye_indeces, lms, frame, self.cap)
+                    raw_coords_dict = self._process_coords(self.reye_indeces, lms, frame, self.cap, coords_to_annotate)
                     lEAR = self._calc_movement(raw_coords_dict, FaceMesh._R_EIDS)
 
-                    self._draw(self.face, lms, frame, self.cap)
+                    raw_coords_dict = self._process_coords(self.face, lms, frame, self.cap, coords_to_annotate)
 
                     avg_EAR = (rEAR + lEAR) / 2
 
@@ -106,3 +112,5 @@ class FaceMesh():
 
                         self.blink_counter = 0
                         print(f'---------------------------------- Total Blinks {self.total_blinks} ----------------------------------')
+                
+                return coords_to_annotate

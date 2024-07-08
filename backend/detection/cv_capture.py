@@ -5,7 +5,7 @@ from detection.mesh import FaceMesh
 from detection.classes.obstacle import Obstacle
 import detection.audio.tts as tts
 import threading
-# import concurrent.futures
+import concurrent.futures
 import cv2
 import supervision as sv
 import time
@@ -43,15 +43,21 @@ class Capture():
         for obstacle in obstacles:
             self.speech.generate_and_play(obstacle.__str__())
 
+
     def encode_image(self, image):
         _, buffer = cv2.imencode('.jpg', image)
         jpg_as_text = base64.b64encode(buffer).decode('utf-8')
         return jpg_as_text
     
+
     def set_end_stream(self, val):
         self.end_stream = val
 
+
     def start_capture(self):
+        thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=2)
+        face_mesh_futrure = None
+
         while not self.end_stream:
 
             succ, frame = self.cap.read()
@@ -61,10 +67,18 @@ class Capture():
 
             result = self.model(frame, agnostic_nms=True, verbose=False)[0]
             detections = sv.Detections.from_ultralytics(result)
-            labels = [
-                f"{self.model.names[class_id]}"
-                for _, _, _, class_id, _, _ in detections
-            ]
+            labels = []
+
+            hasPerson = False
+
+            for _, _, _, class_id, _, _ in detections:
+                entity_type = self.model.names[class_id]
+                labels.append(f"{entity_type}")
+
+                if entity_type == "person" and not hasPerson:
+                    hasPerson  =True
+                    face_mesh_futrure = thread_pool.submit(self.face_mesh.process_frame_face_mesh, frame)
+                
 
             # time_red = time.time()
 
@@ -102,8 +116,9 @@ class Capture():
             self.annotators.zone.trigger(detections=detections)
             frame = self.annotators.zone_annotator.annotate(scene=frame)
 
-            if("person" in labels):
-                self.face_mesh.process_frame_face_mesh(frame)
+            if(face_mesh_futrure):
+                result = face_mesh_futrure.result()
+                self.face_mesh.draw(frame, result)
 
             yield self.encode_image(frame)
 

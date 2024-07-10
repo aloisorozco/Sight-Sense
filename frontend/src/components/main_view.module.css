@@ -30,7 +30,13 @@ label {
     font-size: 80%;
 }
 
-.apply_btn{
+.main_btn{
+    margin-top: 5%;
+}
+
+.main_btn_container{
+    display: flex;
+    flex-direction: column;
     margin-top: auto;
 }
 

@@ -25,7 +25,8 @@ class Capture():
         # change to 1 for webcam - if you have another device connected, otherwise leave at 0 for your default webcam
         # Capture vide + load model
         self.cap = cv2.VideoCapture(0)
-        self.model = YOLO("yolov8n.pt")
+        # self.model = YOLO("yolov8n.pt")
+        self.model = YOLO("faces_30.pt")
         self.model.fuse()
 
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, frame_width)
@@ -75,7 +76,7 @@ class Capture():
                 entity_type = self.model.names[class_id]
                 labels.append(f"{entity_type}")
 
-                if entity_type == "person" and not hasPerson:
+                if entity_type == "face" and not hasPerson:
                     hasPerson  =True
                     face_mesh_futrure = thread_pool.submit(self.face_mesh.process_frame_face_mesh, frame)
                 

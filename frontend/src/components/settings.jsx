@@ -23,34 +23,35 @@ async function checkServerStatus() {
 
 async function endStream(socket) {
 
-    return new Promise((resolve, reject) =>{
+    return new Promise((resolve, reject) => {
         socket.emit('end_stream')
-        socket.on('stream_exit_res', (data) =>{
+        socket.on('stream_exit_res', (data) => {
             resolve(data)
         })
     })
 
 }
 
-async function joinStream(socket){
+async function joinStream(socket) {
 
-    return new Promise((resolve, reject) =>{
+    return new Promise((resolve, reject) => {
         socket.emit('join_stream')
-        socket.on('join_stream_confirmation', (data) => {resolve(data)})
-    }) 
+        socket.on('join_stream_confirmation', (data) => { resolve(data) })
+    })
 }
 
 function SettingsScreen(props) {
 
-    const [confidencePercentage, setConfidencePercentage] = useState(0);
-    const [updateRate, setUpdateRate] = useState(0);
-    const [messagePerUpdate, setMessagePerUpdate] = useState(0);
-    const [hazardObjectThreshold, setHazardObjectSizeThreshold] = useState(0);
+    const [numUnknownPpl, setNumUnknownPpl] = useState(0);
+    const [estimatedPerson, setEstimatedPerson] = useState("");
+
+    const [personInView, setPersonInView] = useState(false);
+
     const [webSocket, setWebSocket] = useState(null)
     const [start, setStart] = useState(false);
 
-    useEffect(()=>{
-        if(!webSocket){
+    useEffect(() => {
+        if (!webSocket) {
             const socket = io(VIDEO_URL)
             setWebSocket(socket)
 
@@ -67,11 +68,11 @@ function SettingsScreen(props) {
             setStart(true)
 
             let res = null
-            await joinStream(webSocket).then((data) =>{
+            await joinStream(webSocket).then((data) => {
                 res = data
             })
 
-            if(res == 200){
+            if (res == 200) {
 
                 webSocket.on("frame", (data) => {
                     console.log('frame recieved')
@@ -81,7 +82,7 @@ function SettingsScreen(props) {
                     })
                 })
 
-            }else{
+            } else {
                 console.log("Cant connect to serwer - I am going to break my monitaur I swaer")
             }
         }
@@ -90,13 +91,13 @@ function SettingsScreen(props) {
     async function stopStream() {
         let end = await endStream(webSocket)
 
-        if(end == 200){
+        if (end == 200) {
             setStart(false)
             props.sendData({
                 frame: null,
                 start: false,
             })
-        }else{
+        } else {
             console.log("Issue disconnecting from the stream - ch-ch-chat is this real??")
         }
     }
@@ -105,29 +106,22 @@ function SettingsScreen(props) {
         <div className={`shadow mr-auto ${classes.settings_container}`}>
 
             <div className={classes.settings_selections}>
-                <label id="conf" htmlFor="customRange1" className="form-label">Confidence Percentage: {confidencePercentage} </label>
-                <input type="range" className="form-range" value={confidencePercentage} min="0" max="5" step="1" id="customRange1" onChange={(e) => updateTextInput(e, setConfidencePercentage)}></input>
+                <label id="conf" htmlFor="customRange1" className="form-label"># Unknown People detected: {numUnknownPpl} </label>
             </div>
 
             <div className={classes.settings_selections}>
-                <label htmlFor="customRange2" className="form-label">Update Rate (sec/update): {updateRate} </label>
-                <input type="range" className="form-range" value={updateRate} min="0" max="5" step="1" id="customRange2" onChange={(e) => updateTextInput(e, setUpdateRate)}></input>
-            </div>
-
-            <div className={classes.settings_selections}>
-                <label htmlFor="customRange3" className="form-label">Message Per Update: {messagePerUpdate} </label>
-                <input type="range" className="form-range" value={messagePerUpdate} min="0" max="5" step="1" id="customRange3" onChange={(e) => updateTextInput(e, setMessagePerUpdate)}></input>
-            </div>
-
-            <div className={classes.settings_selections}>
-                <label htmlFor="customRange4" className="form-label">Hazard Object Percentage Threshold: {hazardObjectThreshold} </label>
-                <input type="range" className="form-range" value={hazardObjectThreshold} min="0" max="5" step="1" id="customRange4" onChange={(e) => updateTextInput(e, setHazardObjectSizeThreshold)}></input>
+                <label htmlFor="customRange2" className="form-label">Estimated Person: {estimatedPerson} </label>
             </div>
 
 
-            {start ?
-                <button onClick={stopStream} type="button" className={`btn btn-primary btn-lg ${classes.apply_btn}`}>Stop</button> :
-                <button onClick={startStream} type="button" className={`btn btn-primary btn-lg ${classes.apply_btn}`}>Apply & Start</button>}
+            <div className={`${classes.main_btn_container}`}>
+                <button onClick={startStream} type="button" className={`btn btn-success btn-lg`} disabled={!personInView}>Authenticate</button>
+
+                {start ?
+                    <button onClick={stopStream} type="button" className={`btn btn-primary btn-lg ${classes.main_btn}`}>Stop</button> :
+                    <button onClick={startStream} type="button" className={`btn btn-primary btn-lg ${classes.main_btn}`}>Apply & Start</button>}
+
+            </div>
 
         </div>
     )

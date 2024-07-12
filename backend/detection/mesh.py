@@ -57,7 +57,7 @@ class FaceMesh():
         frame_w = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
         frame_h = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
 
-        # goind from normalised coords to frame coords
+        # going from normalised coords to frame coords
         for i in landmark_ids:
             x_coord = int(coords[i].x * frame_w)
             y_coord = int(coords[i].y * frame_h)
@@ -111,6 +111,6 @@ class FaceMesh():
                             self.total_blinks += 1
 
                         self.blink_counter = 0
-                        print(f'---------------------------------- Total Blinks {self.total_blinks} ----------------------------------')
+                        # print(f'---------------------------------- Total Blinks {self.total_blinks} ----------------------------------')
                 
                 return coords_to_annotate

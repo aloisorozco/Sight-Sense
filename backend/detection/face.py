@@ -4,16 +4,21 @@ from filterpy.kalman import KalmanFilter
 # TODO: spend some time understadning the math behind Kalman filter - Udemy is a great place to start
 class Face:
 
-    def __init__(self, bbox, id):
-        self.bbox = Face._calc_center_from_bbox(bbox)
-        self.face_id = id
+    _last_uuid = 0 #change this to use a uuid library or make some hash later so we dont just increment a counter
+
+    def __init__(self, bbox):
+        self.bbox = bbox
+        self.face_center_params = Face._calc_params_from_bbox(bbox)
+        self.face_id = Face._last_uuid
         self.kalman_filter = self._init_kelman_filter()
 
-    def _calc_center_from_bbox(bbox):
+        Face._last_uuid += 1
+
+    def _calc_params_from_bbox(bbox):
         x1, y1, x2, y2 = bbox
 
-        width = abs(x2 - x1)
-        height = abs(y2 - y1)
+        width = abs(x2 - x1 + 1)
+        height = abs(y2 - y1 + 1)
 
         center_x = (x1 + x2) / 2
         center_y = (y1 + y2) / 2
@@ -26,7 +31,7 @@ class Face:
         kf = KalmanFilter(dim_x=8, dim_z=4)
 
         # Initial state
-        x, y, w, h = self.bbox
+        x, y, w, h = self.face_center_params
         kf.x = np.array([x, y, w, h, 0, 0, 0, 0])
 
         # State transition matrix
@@ -61,10 +66,24 @@ class Face:
         kf.Q[4:, 4:] *= 0.01
 
         return kf
+
+    # calculate the bbox from the kalman estimate of x,y,w,h
+    def get_kalman_bbox(self):
+        x,y,w,h = self.kalman_filter.x[:4]
+
+        x1 = abs(x - float(w / 2))
+        x2 = abs(x + float(w / 2))
+        y1 = abs(y - float(h / 2))
+        y2 = abs(y + float(h / 2))
+        
+        return x1, y1, x2, y2
     
     def update(self, new_bbox):
-        self.kalman_filter.update(new_bbox)
+        new_center_params = Face._calc_params_from_bbox(new_bbox)
         self.bbox = new_bbox
+        self.face_center_params = new_center_params
+
+        self.kalman_filter.update(new_center_params)
 
     def predict(self):
         self.kalman_filter.predict()

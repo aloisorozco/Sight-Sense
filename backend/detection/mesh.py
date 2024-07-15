@@ -29,7 +29,7 @@ class FaceMesh():
         self.reye_indeces = self._get_unique_landmark(reye_indeces)
         self.face = self._get_unique_landmark(face)
 
-        self.face_mesh_model = self.mp_face_mesh.FaceMesh(max_num_faces=2,
+        self.face_mesh_model = self.mp_face_mesh.FaceMesh(max_num_faces=5,
                                                 refine_landmarks=True,
                                                 min_detection_confidence=0.7,
                                                 min_tracking_confidence=0.5)

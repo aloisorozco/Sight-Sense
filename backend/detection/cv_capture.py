@@ -19,6 +19,9 @@ class Capture():
     _CONFIDENCE_THRESHOLD = 0.5
     _TIME_OUT = 2
     _speech_thread = None
+    _authenticate_id = 0 # TODO: make front-end send the ID of the person who they wish to authenticate
+
+    mutex = threading.Lock()
 
     def __init__(self, args) -> None:
 
@@ -42,6 +45,18 @@ class Capture():
         # self.speech = tts.TTS()
         self.face_mesh = FaceMesh(self.cap)
 
+    def update_auth_target(id):
+        Capture.mutex.acquire()
+        Capture._authenticate_id = id
+        Capture.mutex.release()
+
+    def get_auth_id():
+        Capture.mutex.acquire()
+        id = Capture._authenticate_id
+        Capture.mutex.release()
+
+        return id
+
     def _speak_messages(self, obstacles):
         for obstacle in obstacles:
             self.speech.generate_and_play(obstacle.__str__())
@@ -58,7 +73,7 @@ class Capture():
 
     def start_capture(self):
         thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=2)
-        face_mesh_futrure = None
+        face_mesh_future = None
 
         faces_tracker = FaceTracker()
 
@@ -81,11 +96,16 @@ class Capture():
                 res = None
                 if entity_type == "face":
                     
-                    if(not fm_subprocess_started):
-                        fm_subprocess_started = True
-                        face_mesh_futrure = thread_pool.submit(self.face_mesh.process_frame_face_mesh, frame)
-
                     res = faces_tracker.re_index_faces(xyxy)
+
+                    auth_id = Capture.get_auth_id()
+
+                    if(auth_id >= -1 and res[0] and res[1] == auth_id and not fm_subprocess_started):
+                        fm_subprocess_started = True
+
+                        target_face_img = frame[int(xyxy[1]):int(xyxy[3]), int(xyxy[0]):int(xyxy[2])] #TODO: fix the drawing - low priorety because the solution should work with authentication - drawing is for the fun of it :)
+                        face_mesh_future = thread_pool.submit(self.face_mesh.process_frame_face_mesh, target_face_img)
+
                     if(not res[0]):
                         new_face = Face(xyxy)
                         faces_tracker.new_faces[new_face.face_id] = new_face
@@ -132,9 +152,9 @@ class Capture():
             self.annotators.zone.trigger(detections=detections)            
             # frame = self.annotators.zone_annotator.annotate(scene=frame)
 
-            if(face_mesh_futrure):
-                result = face_mesh_futrure.result()
-                # self.face_mesh.draw(frame, result)
+            if(face_mesh_future):
+                result = face_mesh_future.result()
+                self.face_mesh.draw(frame, result)
 
                 for _, face in faces_tracker.face_dict.items():
                     x = int(face.face_center_params[0])

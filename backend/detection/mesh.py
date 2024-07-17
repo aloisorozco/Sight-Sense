@@ -1,4 +1,5 @@
 import cv2
+import random
 import mediapipe.python.solutions.face_mesh as face_mesh
 
 class FaceMesh():
@@ -6,9 +7,14 @@ class FaceMesh():
     # These are the IDs of the landmark coords that we need to compute the EAR - its an associative array so DO NOT CHANGE THE ORDER
     _R_EIDS = [33, 160, 158, 155, 153, 144]
     _L_EIDS = [382, 384, 387, 263, 373, 380]
-
     EAR_THRESHOLD = 0.2
-    TEMPORAL_WINDOW = 3
+    MAX_BLINKS = 10
+    MIN_BLINKS = 3
+    TEMPORAL_WINDOW_MIN = 3
+    TEMPORAL_WINDOW_MAX = 5
+
+    temporal_window  = 3
+    blink_goal = 3
 
     def __init__(self, cap):
 
@@ -29,11 +35,16 @@ class FaceMesh():
         self.reye_indeces = self._get_unique_landmark(reye_indeces)
         self.face = self._get_unique_landmark(face)
 
-        self.face_mesh_model = self.mp_face_mesh.FaceMesh(max_num_faces=5,
+        self.face_mesh_model = self.mp_face_mesh.FaceMesh(max_num_faces=1,
                                                 refine_landmarks=True,
                                                 min_detection_confidence=0.7,
                                                 min_tracking_confidence=0.5)
-        
+    
+    def gen_blink_sequence(self):
+        self.blink_goal = random.randint(FaceMesh.MIN_BLINKS, FaceMesh.MAX_BLINKS)
+        self.temporal_window = random.randint(FaceMesh.TEMPORAL_WINDOW_MIN, FaceMesh.TEMPORAL_WINDOW_MAX)
+
+
     def ptp(self):
         if(self.face_mesh_model):
             self.face_mesh_model.close()
@@ -41,8 +52,8 @@ class FaceMesh():
             print("Model does not exist in memory or has already been closed")
 
 
-    def _calc_movement(self, coords_dict, ids_to_get):
-        # lets do blink detection - great ressource: https://peerj.com/articles/cs-943/
+    # blink detection - source: https://peerj.com/articles/cs-943/
+    def _calc_blink(self, coords_dict, ids_to_get):
 
         filtered_coords = {}
         for index, i in enumerate(ids_to_get):
@@ -94,10 +105,10 @@ class FaceMesh():
                     lms = face_landmarks.landmark
 
                     raw_coords_dict = self._process_coords(self.leye_indeces, lms, frame, self.cap, coords_to_annotate)
-                    rEAR = self._calc_movement(raw_coords_dict, FaceMesh._L_EIDS)
+                    rEAR = self._calc_blink(raw_coords_dict, FaceMesh._L_EIDS)
 
                     raw_coords_dict = self._process_coords(self.reye_indeces, lms, frame, self.cap, coords_to_annotate)
-                    lEAR = self._calc_movement(raw_coords_dict, FaceMesh._R_EIDS)
+                    lEAR = self._calc_blink(raw_coords_dict, FaceMesh._R_EIDS)
 
                     raw_coords_dict = self._process_coords(self.face, lms, frame, self.cap, coords_to_annotate)
 
@@ -107,7 +118,7 @@ class FaceMesh():
                         self.blink_counter += 1
 
                     else:
-                        if self.blink_counter >= FaceMesh.TEMPORAL_WINDOW:
+                        if self.blink_counter >= FaceMesh.temporal_window:
                             self.total_blinks += 1
 
                         self.blink_counter = 0

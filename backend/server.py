@@ -1,6 +1,8 @@
 import socketio
 from aiohttp import web
 import aiohttp_cors
+from detection.cv_capture import Capture
+
 class Server():
 
     app = web.Application()
@@ -25,12 +27,25 @@ class Server():
     # this is not a socket opperation - just a standard HTTP request to see if server is alive
     async def status(request):
         return web.Response(status=200)
-
+    
 
     async def capture_and_send(self):
         for encoded_frame in Server._camera.start_capture():
             await Server.sio.emit('frame', encoded_frame, room='super_secret_security_camera_broadcast')
             await Server.sio.sleep(0.01)
+
+    
+    async def lock_in_face(id):
+        Capture.update_auth_target(id)
+
+
+    @sio.on('authenticate') # TODO: Connect on the frontend
+    async def join_stream(sid, data):
+        if len(Server.sio.rooms(sid)) > 0:
+            Server.sio.start_background_task(Server.lock_in_face, data["target_id"])
+            await Server.sio.emit('started', 200, sid)
+        else:
+            await Server.sio.emit('bad', 400, sid)
 
 
     @sio.on('join_stream')

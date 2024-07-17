@@ -8,7 +8,7 @@ class FaceMesh():
     _R_EIDS = [33, 160, 158, 155, 153, 144]
     _L_EIDS = [382, 384, 387, 263, 373, 380]
     EAR_THRESHOLD = 0.2
-    MAX_BLINKS = 10
+    MAX_BLINKS = 7
     MIN_BLINKS = 3
     TEMPORAL_WINDOW_MIN = 3
     TEMPORAL_WINDOW_MAX = 5
@@ -39,17 +39,16 @@ class FaceMesh():
                                                 refine_landmarks=True,
                                                 min_detection_confidence=0.7,
                                                 min_tracking_confidence=0.5)
+
+
     
-    def gen_blink_sequence(self):
-        self.blink_goal = random.randint(FaceMesh.MIN_BLINKS, FaceMesh.MAX_BLINKS)
-        self.temporal_window = random.randint(FaceMesh.TEMPORAL_WINDOW_MIN, FaceMesh.TEMPORAL_WINDOW_MAX)
+    def _get_unique_landmark(self, landmarks):
+        landmark_set = set()
 
+        for l in landmarks:
+            landmark_set.add(l[0])
 
-    def ptp(self):
-        if(self.face_mesh_model):
-            self.face_mesh_model.close()
-        else:
-            print("Model does not exist in memory or has already been closed")
+        return list(landmark_set)
 
 
     # blink detection - source: https://peerj.com/articles/cs-943/
@@ -63,36 +62,44 @@ class FaceMesh():
                filtered_coords[5][1])) / (2 * abs(filtered_coords[1][0] - filtered_coords[4][0]))
         return ear
 
-    def _process_coords(self, landmark_ids, coords, frame, cap, coords_to_annotate, coords_dict = {}):
 
-        frame_w = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
-        frame_h = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+    def _process_coords(self, landmark_ids, coords, frame, bbox_bottom_left_coord, coords_to_annotate, coords_dict = {}):
+        
+        img_h, img_w = frame.shape[:2]
+        corner_x = int(bbox_bottom_left_coord[0])
+        corner_y = int(bbox_bottom_left_coord[1])
 
         # going from normalised coords to frame coords
         for i in landmark_ids:
-            x_coord = int(coords[i].x * frame_w)
-            y_coord = int(coords[i].y * frame_h)
-            coord_tuple = (x_coord, y_coord)
+            x_coord = int(coords[i].x * img_w)
+            y_coord = int(coords[i].y * img_h)
+            coord_tuple = (x_coord + corner_x, y_coord + corner_y)
 
             coords_dict[i] = coord_tuple
             coords_to_annotate.append(coord_tuple)
 
         return coords_dict
     
+
     def draw(self, frame, coords):
         if(coords):
             for coord in coords:
                 cv2.circle(frame, coord, radius=1, color=(0, 0, 255), thickness=4)
 
-    def _get_unique_landmark(self, landmarks):
-        landmark_set = set()
+    
+    def gen_blink_sequence(self):
+        self.blink_goal = random.randint(FaceMesh.MIN_BLINKS, FaceMesh.MAX_BLINKS)
+        self.temporal_window = random.randint(FaceMesh.TEMPORAL_WINDOW_MIN, FaceMesh.TEMPORAL_WINDOW_MAX)
 
-        for l in landmarks:
-            landmark_set.add(l[0])
 
-        return list(landmark_set)
+    def ptp(self):
+        if(self.face_mesh_model):
+            self.face_mesh_model.close()
+        else:
+            print("Model does not exist in memory or has already been closed")
 
-    def process_frame_face_mesh(self, frame):
+
+    def process_frame_face_mesh(self, frame, bbox_bottom_corner):
 
             results = self.face_mesh_model.process(frame)
             frame.flags.writeable = True
@@ -104,13 +111,13 @@ class FaceMesh():
                 for face_landmarks in results.multi_face_landmarks:
                     lms = face_landmarks.landmark
 
-                    raw_coords_dict = self._process_coords(self.leye_indeces, lms, frame, self.cap, coords_to_annotate)
+                    raw_coords_dict = self._process_coords(self.leye_indeces, lms, frame, bbox_bottom_corner, coords_to_annotate)
                     rEAR = self._calc_blink(raw_coords_dict, FaceMesh._L_EIDS)
 
-                    raw_coords_dict = self._process_coords(self.reye_indeces, lms, frame, self.cap, coords_to_annotate)
+                    raw_coords_dict = self._process_coords(self.reye_indeces, lms, frame, bbox_bottom_corner, coords_to_annotate)
                     lEAR = self._calc_blink(raw_coords_dict, FaceMesh._R_EIDS)
 
-                    raw_coords_dict = self._process_coords(self.face, lms, frame, self.cap, coords_to_annotate)
+                    raw_coords_dict = self._process_coords(self.face, lms, frame, bbox_bottom_corner, coords_to_annotate)
 
                     avg_EAR = (rEAR + lEAR) / 2
 

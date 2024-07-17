@@ -104,7 +104,7 @@ class Capture():
                         fm_subprocess_started = True
 
                         target_face_img = frame[int(xyxy[1]):int(xyxy[3]), int(xyxy[0]):int(xyxy[2])] #TODO: fix the drawing - low priorety because the solution should work with authentication - drawing is for the fun of it :)
-                        face_mesh_future = thread_pool.submit(self.face_mesh.process_frame_face_mesh, target_face_img)
+                        face_mesh_future = thread_pool.submit(self.face_mesh.process_frame_face_mesh, target_face_img, (xyxy[0], xyxy[1]))
 
                     if(not res[0]):
                         new_face = Face(xyxy)

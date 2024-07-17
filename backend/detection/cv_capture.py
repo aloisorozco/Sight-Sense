@@ -19,7 +19,7 @@ class Capture():
     _CONFIDENCE_THRESHOLD = 0.5
     _TIME_OUT = 2
     _speech_thread = None
-    _authenticate_id = 0 # TODO: make front-end send the ID of the person who they wish to authenticate
+    _authenticate_id = 1 # TODO: make front-end send the ID of the person who they wish to authenticate
 
     mutex = threading.Lock()
 
@@ -67,6 +67,13 @@ class Capture():
         jpg_as_text = base64.b64encode(buffer).decode('utf-8')
         return jpg_as_text
     
+    def countdown(self, length):
+        for i in range(length):
+            time.sleep(1)
+            print(length - i)
+        
+        self.face_mesh.start_timout()
+    
 
     def set_end_stream(self, val):
         self.end_stream = val
@@ -76,6 +83,7 @@ class Capture():
         face_mesh_future = None
 
         faces_tracker = FaceTracker()
+        start_auth = True # TODO: find a better flow of control solutuon
 
         while not self.end_stream:
 
@@ -103,7 +111,17 @@ class Capture():
                     if(auth_id >= -1 and res[0] and res[1] == auth_id and not fm_subprocess_started):
                         fm_subprocess_started = True
 
-                        target_face_img = frame[int(xyxy[1]):int(xyxy[3]), int(xyxy[0]):int(xyxy[2])] #TODO: fix the drawing - low priorety because the solution should work with authentication - drawing is for the fun of it :)
+                        if start_auth:
+                            start_auth = False
+                            print(f"~~~~~~~~ Begingin Authentication procedure for the Person with Face ID {auth_id}")
+                            self.face_mesh.gen_blink_sequence()
+
+                            # TODO: try and replace by thread pool for safer thread management
+                            t1 = threading.Thread(target=self.countdown, args=(5,))
+                            t1.start()
+
+                        
+                        target_face_img = frame[int(xyxy[1]):int(xyxy[3]), int(xyxy[0]):int(xyxy[2])] # only processing the section of the frame which is the person's face
                         face_mesh_future = thread_pool.submit(self.face_mesh.process_frame_face_mesh, target_face_img, (xyxy[0], xyxy[1]))
 
                     if(not res[0]):
@@ -153,8 +171,12 @@ class Capture():
             # frame = self.annotators.zone_annotator.annotate(scene=frame)
 
             if(face_mesh_future):
-                result = face_mesh_future.result()
-                self.face_mesh.draw(frame, result)
+                coords_to_draw, auth_finished = face_mesh_future.result()
+                self.face_mesh.draw(frame, coords_to_draw)
+
+                # TODO: Make sure this does not cause the capture thread to block - stress test it
+                if auth_finished:
+                    Capture.update_auth_target(-1)
 
                 for _, face in faces_tracker.face_dict.items():
                     x = int(face.face_center_params[0])

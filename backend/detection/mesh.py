@@ -1,5 +1,6 @@
 import cv2
 import random
+import time
 import mediapipe.python.solutions.face_mesh as face_mesh
 
 class FaceMesh():
@@ -13,13 +14,14 @@ class FaceMesh():
     TEMPORAL_WINDOW_MIN = 3
     TEMPORAL_WINDOW_MAX = 5
 
-    temporal_window  = 3
-    blink_goal = 3
-
     def __init__(self, cap):
+        
+        self._timeout = None
 
         self.blink_counter = 0
         self.total_blinks = 0
+        self.temporal_window  = 3
+        self.blink_goal = 3
 
         self.lEAR = None
         self.rEAR = None
@@ -40,7 +42,6 @@ class FaceMesh():
                                                 min_detection_confidence=0.7,
                                                 min_tracking_confidence=0.5)
 
-
     
     def _get_unique_landmark(self, landmarks):
         landmark_set = set()
@@ -49,6 +50,9 @@ class FaceMesh():
             landmark_set.add(l[0])
 
         return list(landmark_set)
+
+    def start_timout(self):
+        self._timeout = int(time.time()) + 60
 
 
     # blink detection - source: https://peerj.com/articles/cs-943/
@@ -90,6 +94,7 @@ class FaceMesh():
     def gen_blink_sequence(self):
         self.blink_goal = random.randint(FaceMesh.MIN_BLINKS, FaceMesh.MAX_BLINKS)
         self.temporal_window = random.randint(FaceMesh.TEMPORAL_WINDOW_MIN, FaceMesh.TEMPORAL_WINDOW_MAX)
+        print(f"~~~~~~~~ After coundown, perform {self.blink_goal} blinks, each blink lasting {self.temporal_window}")
 
 
     def ptp(self):
@@ -105,6 +110,7 @@ class FaceMesh():
             frame.flags.writeable = True
 
             coords_to_annotate = []
+            auth_finished = False
 
             if results.multi_face_landmarks:
 
@@ -112,23 +118,40 @@ class FaceMesh():
                     lms = face_landmarks.landmark
 
                     raw_coords_dict = self._process_coords(self.leye_indeces, lms, frame, bbox_bottom_corner, coords_to_annotate)
-                    rEAR = self._calc_blink(raw_coords_dict, FaceMesh._L_EIDS)
+                    lEAR = self._calc_blink(raw_coords_dict, FaceMesh._L_EIDS) if self._timeout else 0
 
                     raw_coords_dict = self._process_coords(self.reye_indeces, lms, frame, bbox_bottom_corner, coords_to_annotate)
-                    lEAR = self._calc_blink(raw_coords_dict, FaceMesh._R_EIDS)
+                    rEAR = self._calc_blink(raw_coords_dict, FaceMesh._R_EIDS) if self._timeout else 0
 
                     raw_coords_dict = self._process_coords(self.face, lms, frame, bbox_bottom_corner, coords_to_annotate)
 
                     avg_EAR = (rEAR + lEAR) / 2
 
-                    if avg_EAR < FaceMesh.EAR_THRESHOLD:
-                        self.blink_counter += 1
+                    if self._timeout:
 
-                    else:
-                        if self.blink_counter >= FaceMesh.temporal_window:
-                            self.total_blinks += 1
+                        if(int(time.time()) <= self._timeout):
+                            if avg_EAR < FaceMesh.EAR_THRESHOLD:
+                                self.blink_counter += 1
 
-                        self.blink_counter = 0
-                        # print(f'---------------------------------- Total Blinks {self.total_blinks} ----------------------------------')
+                            else:
+                                if self.blink_counter >= self.temporal_window:
+                                    self.total_blinks += 1
+
+                                    if self.total_blinks == self.blink_goal:
+                                        # Here we will return a response indicating that the user is a human
+                                        print('Yipiee you did it congrats - you are a human!!!')
+                                        self._timeout = None
+                                        auth_finished = True
+
+                                    else:
+                                        print(f'---------------------------------- Blinks Remaining {self.blink_goal - self.total_blinks} ----------------------------------')
+
+                                self.blink_counter = 0
+                                
+                        else:
+                            print('~~~~~~~~ TIMEOUT - re-authenticate with admin')
+                            self._timeout = None
+                            auth_finished = True
+
                 
-                return coords_to_annotate
+                return coords_to_annotate, auth_finished

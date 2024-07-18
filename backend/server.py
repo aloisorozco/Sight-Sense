@@ -24,29 +24,39 @@ class Server():
     def __init__(self, camera) -> None:
         Server._camera = camera
     
-    # this is not a socket opperation - just a standard HTTP request to see if server is alive
-    async def status(request):
-        return web.Response(status=200)
-    
 
     async def capture_and_send(self):
         for encoded_frame in Server._camera.start_capture():
             await Server.sio.emit('frame', encoded_frame, room='super_secret_security_camera_broadcast')
             await Server.sio.sleep(0.01)
 
-    
+
     async def lock_in_face(id):
         Capture.update_auth_target(id)
+    
 
+    async def check_face_existance(id):
+        # TODO: secutirey check if face exists - future Daniel problem
+        return True
+    
+
+    # this is not a socket opperation - just a standard HTTP request to see if server is alive
+    async def status(request):
+        return web.Response(status=200)
+    
 
     @sio.on('authenticate') # TODO: Connect on the frontend
     async def join_stream(sid, data):
-        if len(Server.sio.rooms(sid)) > 0:
-            Server.sio.start_background_task(Server.lock_in_face, data["target_id"])
-            await Server.sio.emit('started', 200, sid)
-        else:
-            await Server.sio.emit('bad', 400, sid)
+        if len(Server.sio.rooms(sid)) == 0:
+            await Server.sio.emit('user_in_no_rooms', 401, sid)
 
+        elif (await Server.check_face_existance(data)):
+            Server.sio.start_background_task(Server.lock_in_face, data)
+            await Server.sio.emit('auth_started', 200, sid)
+
+        else:
+            await Server.sio.emit('face_not_found', 402, sid)
+            
 
     @sio.on('join_stream')
     async def join_stream(sid):

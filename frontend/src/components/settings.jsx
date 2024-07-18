@@ -2,13 +2,31 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import io from 'socket.io-client';
 import classes from "./main_view.module.css"
-import 'bootstrap/dist/css/bootstrap.min.css';
+import 'bootstrap/dist/css/bootstrap.min.css'
+// import Swal from 'sweetalert2'
+
 
 const VIDEO_URL = "http://127.0.0.1:5500/"
 
 function updateTextInput(event, setter) {
     setter(event.target.value);
 }
+
+async function authenticatePerson(socket, personID = 0){
+    return new Promise((resolve, reject) =>{
+        socket.emit('authenticate', personID)
+        socket.on('auth_started', (data)=>{
+            resolve(data)
+        })
+        socket.on('user_in_no_rooms', (data)=>{
+            reject(data)
+        })
+        socket.on('face_not_found', (data)=>{
+            reject(data)
+        })
+    })
+}
+
 
 async function checkServerStatus() {
 
@@ -45,7 +63,7 @@ function SettingsScreen(props) {
     const [numUnknownPpl, setNumUnknownPpl] = useState(0);
     const [estimatedPerson, setEstimatedPerson] = useState("");
 
-    const [personInView, setPersonInView] = useState(false);
+    const [authAllowed, setAuthAllowed] = useState(false);
 
     const [webSocket, setWebSocket] = useState(null)
     const [start, setStart] = useState(false);
@@ -61,11 +79,29 @@ function SettingsScreen(props) {
         }
     }, [])
 
+    async function auth_human() {
+        await authenticatePerson(webSocket).then((res) =>{
+            // TODO: Make this into an alert or something
+            console.log("all good")
+            setAuthAllowed(false)
+
+        }).catch((res) =>{
+            if(res == 401){
+                // TODO: Make this into an alert or something
+                console.log("User not in any room")
+            }else if(res == 402){
+                // TODO: Make this into an alert or something
+                console.log("The ID entered is not valid - please type a valid one")
+            }
+        })
+    }
+
     async function startStream() {
         let stat = await checkServerStatus()
 
         if (stat) {
             setStart(true)
+            setAuthAllowed(true)
 
             let res = null
             await joinStream(webSocket).then((data) => {
@@ -93,6 +129,7 @@ function SettingsScreen(props) {
 
         if (end == 200) {
             setStart(false)
+            setAuthAllowed(false)
             props.sendData({
                 frame: null,
                 start: false,
@@ -115,7 +152,11 @@ function SettingsScreen(props) {
 
 
             <div className={`${classes.main_btn_container}`}>
-                <button onClick={startStream} type="button" className={`btn btn-success btn-lg`} disabled={!personInView}>Authenticate</button>
+                <div className={`${classes.ID_input}`}>
+                    <input type="input" class="form-control" id="exampleInputID" aria-describedby="emailHelp" placeholder="ID of the person to authenticate" />
+                </div>
+
+                <button onClick={auth_human} type="button" className={`btn btn-success btn-lg`} disabled={!authAllowed}>Authenticate</button>
 
                 {start ?
                     <button onClick={stopStream} type="button" className={`btn btn-primary btn-lg ${classes.main_btn}`}>Stop</button> :

@@ -19,7 +19,7 @@ class Capture():
     _CONFIDENCE_THRESHOLD = 0.5
     _TIME_OUT = 2
     _speech_thread = None
-    _authenticate_id = 1 # TODO: make front-end send the ID of the person who they wish to authenticate
+    _authenticate_id = None
 
     mutex = threading.Lock()
 
@@ -45,6 +45,9 @@ class Capture():
         # self.speech = tts.TTS()
         self.face_mesh = FaceMesh(self.cap)
 
+        self.faces_tracker = FaceTracker()
+        self.thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=2)
+
     def update_auth_target(id):
         Capture.mutex.acquire()
         Capture._authenticate_id = id
@@ -67,23 +70,16 @@ class Capture():
         jpg_as_text = base64.b64encode(buffer).decode('utf-8')
         return jpg_as_text
     
-    def countdown(self, length):
-        for i in range(length):
-            time.sleep(1)
-            print(length - i)
-        
-        self.face_mesh.start_timout()
-    
 
     def set_end_stream(self, val):
         self.end_stream = val
 
     def start_capture(self):
-        thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=2)
+       
         face_mesh_future = None
-
-        faces_tracker = FaceTracker()
         start_auth = True # TODO: find a better flow of control solutuon
+
+        cached_frame = None
 
         while not self.end_stream:
 
@@ -104,11 +100,11 @@ class Capture():
                 res = None
                 if entity_type == "face":
                     
-                    res = faces_tracker.re_index_faces(xyxy)
+                    res = self.faces_tracker.re_index_faces(xyxy)
 
                     auth_id = Capture.get_auth_id()
 
-                    if(auth_id >= -1 and res[0] and res[1] == auth_id and not fm_subprocess_started):
+                    if(auth_id is not None and res[0] and res[1] == auth_id and not fm_subprocess_started):
                         fm_subprocess_started = True
 
                         if start_auth:
@@ -116,23 +112,22 @@ class Capture():
                             print(f"~~~~~~~~ Begingin Authentication procedure for the Person with Face ID {auth_id}")
                             self.face_mesh.gen_blink_sequence()
 
-                            # TODO: try and replace by thread pool for safer thread management
-                            t1 = threading.Thread(target=self.countdown, args=(5,))
+                            t1 = threading.Timer(interval=5.0, function=self.face_mesh.start_timeout)
                             t1.start()
 
                         
                         target_face_img = frame[int(xyxy[1]):int(xyxy[3]), int(xyxy[0]):int(xyxy[2])] # only processing the section of the frame which is the person's face
-                        face_mesh_future = thread_pool.submit(self.face_mesh.process_frame_face_mesh, target_face_img, (xyxy[0], xyxy[1]))
+                        face_mesh_future = self.thread_pool.submit(self.face_mesh.process_frame_face_mesh, target_face_img, (xyxy[0], xyxy[1]))
 
                     if(not res[0]):
                         new_face = Face(xyxy)
-                        faces_tracker.new_faces[new_face.face_id] = new_face
+                        self.faces_tracker.new_faces[new_face.face_id] = new_face
 
                 labels.append(f"{entity_type} ID:{res[1] if res else -1}")
             
             #TODO: We should try run this in its own thread not to waste resources
-            faces_tracker.swap_dict()
-            faces_tracker.add_new_faces_to_dict()
+            self.faces_tracker.swap_dict()
+            self.faces_tracker.add_new_faces_to_dict()
 
             # time_red = time.time()
 
@@ -171,14 +166,16 @@ class Capture():
             # frame = self.annotators.zone_annotator.annotate(scene=frame)
 
             if(face_mesh_future):
+                cached_frame = frame.copy()
                 coords_to_draw, auth_finished = face_mesh_future.result()
                 self.face_mesh.draw(frame, coords_to_draw)
 
                 # TODO: Make sure this does not cause the capture thread to block - stress test it
                 if auth_finished:
-                    Capture.update_auth_target(-1)
+                    frame = cached_frame
+                    Capture.update_auth_target(None)
 
-                for _, face in faces_tracker.face_dict.items():
+                for _, face in self.faces_tracker.face_dict.items():
                     x = int(face.face_center_params[0])
                     y = int(face.face_center_params[1])
                     cv2.circle(frame, (x,y), radius=5, color=(0, 0, 255), thickness=4) #red
@@ -202,5 +199,5 @@ class Capture():
         # Release the capture object and close all windows
         self.cap.release()
         cv2.destroyAllWindows()
-        thread_pool.shutdown()
+        self.thread_pool.shutdown()
         self.face_mesh.ptp()

@@ -51,7 +51,8 @@ class FaceMesh():
 
         return list(landmark_set)
 
-    def start_timout(self):
+    def start_timeout(self):
+        print("Start Blinking!")
         self._timeout = int(time.time()) + 60
 
 

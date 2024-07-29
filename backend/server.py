@@ -1,7 +1,9 @@
 import socketio
-from aiohttp import web
 import aiohttp_cors
+import asyncio
+import concurrent.futures
 from detection.cv_capture import Capture
+from aiohttp import web
 
 class Server():
 
@@ -34,11 +36,10 @@ class Server():
     async def lock_in_face(id):
         Capture.update_auth_target(id)
     
+    # TODO: look into other ways - idealy we should await an asynch function
+    def check_face_existance(sid, id):
+        return Capture.check_face_present(id)
 
-    async def check_face_existance(id):
-        # TODO: secutirey check if face exists - future Daniel problem
-        return True
-    
 
     # this is not a socket opperation - just a standard HTTP request to see if server is alive
     async def status(request):
@@ -46,16 +47,19 @@ class Server():
     
 
     @sio.on('authenticate') # TODO: Connect on the frontend
-    async def join_stream(sid, data):
+    async def authenticate(sid, data):
+
         if len(Server.sio.rooms(sid)) == 0:
             await Server.sio.emit('user_in_no_rooms', 401, sid)
-
-        elif (await Server.check_face_existance(data)):
-            Server.sio.start_background_task(Server.lock_in_face, data)
-            await Server.sio.emit('auth_started', 200, sid)
-
         else:
-            await Server.sio.emit('face_not_found', 402, sid)
+            check_res = await asyncio.get_event_loop().run_in_executor(None, Server.check_face_existance, *(sid, data))
+            if (check_res):
+                Server.sio.start_background_task(Server.lock_in_face, data)
+                await Server.sio.emit('auth_started', 200, sid)
+
+            else:
+                print(f"person with ID {data} does not exist")
+                await Server.sio.emit('face_not_found', 402, sid) 
             
 
     @sio.on('join_stream')

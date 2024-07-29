@@ -32,7 +32,7 @@ class FaceTracker():
         
         else:
             self.face_dict = self.processed_list
-            self.processed_list = {} # we DONT clear here - we want the refereance in face_dict to persist
+            self.processed_list = {} # we DON'T clear here - we want the referance in face_dict to persist
         
 
     # compute IoU between face.kelman_filter + new_bbox (use _IoU_comparison)

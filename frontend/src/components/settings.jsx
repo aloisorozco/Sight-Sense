@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import io from 'socket.io-client';
 import classes from "./main_view.module.css"
@@ -12,9 +12,10 @@ function updateTextInput(event, setter) {
     setter(event.target.value);
 }
 
-async function authenticatePerson(socket, personID = 0){
+async function authenticatePerson(socket, personID){
     return new Promise((resolve, reject) =>{
-        socket.emit('authenticate', personID)
+
+        socket.emit('authenticate', Number(personID))
         socket.on('auth_started', (data)=>{
             resolve(data)
         })
@@ -60,6 +61,8 @@ async function joinStream(socket) {
 
 function SettingsScreen(props) {
 
+    const input_ref = useRef(null)
+
     const [numUnknownPpl, setNumUnknownPpl] = useState(0);
     const [estimatedPerson, setEstimatedPerson] = useState("");
 
@@ -80,7 +83,7 @@ function SettingsScreen(props) {
     }, [])
 
     async function auth_human() {
-        await authenticatePerson(webSocket).then((res) =>{
+        await authenticatePerson(webSocket, input_ref.current.value).then((res) =>{
             // TODO: Make this into an alert or something
             console.log("all good")
             setAuthAllowed(false)
@@ -89,9 +92,11 @@ function SettingsScreen(props) {
             if(res == 401){
                 // TODO: Make this into an alert or something
                 console.log("User not in any room")
+                setAuthAllowed(true)
             }else if(res == 402){
                 // TODO: Make this into an alert or something
                 console.log("The ID entered is not valid - please type a valid one")
+                setAuthAllowed(true)
             }
         })
     }
@@ -153,7 +158,7 @@ function SettingsScreen(props) {
 
             <div className={`${classes.main_btn_container}`}>
                 <div className={`${classes.ID_input}`}>
-                    <input type="input" class="form-control" id="exampleInputID" aria-describedby="emailHelp" placeholder="ID of the person to authenticate" />
+                    <input ref={input_ref} type="input" class="form-control" id="exampleInputID" aria-describedby="emailHelp" placeholder="ID of the person to authenticate" />
                 </div>
 
                 <button onClick={auth_human} type="button" className={`btn btn-success btn-lg`} disabled={!authAllowed}>Authenticate</button>

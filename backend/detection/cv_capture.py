@@ -21,6 +21,10 @@ class Capture():
     _speech_thread = None
     _authenticate_id = None
 
+    _faces_dict_mutex = threading.Lock()
+    _dict_udpated_condition = threading.Condition(_faces_dict_mutex)
+    _dict_shared = {}
+
     mutex = threading.Lock()
 
     def __init__(self, args) -> None:
@@ -46,7 +50,30 @@ class Capture():
         self.face_mesh = FaceMesh(self.cap)
 
         self.faces_tracker = FaceTracker()
-        self.thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=2)
+        self.thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=3)
+
+    def check_face_present(face_id):
+        Capture._dict_udpated_condition.acquire()
+        Capture._dict_udpated_condition.wait()
+
+        res = face_id in Capture._dict_shared 
+
+        Capture._dict_udpated_condition.release()
+
+        return res
+    
+    
+    def save_faces_post_processing(self):
+        Capture._dict_udpated_condition.acquire()
+
+        self.faces_tracker.swap_dict()
+        self.faces_tracker.add_new_faces_to_dict()
+
+        Capture._dict_shared = self.faces_tracker.face_dict # TODO: May need to do a deep copy just to be safe
+        
+        Capture._dict_udpated_condition.notify()
+        Capture._dict_udpated_condition.release()
+
 
     def update_auth_target(id):
         Capture.mutex.acquire()
@@ -77,6 +104,7 @@ class Capture():
     def start_capture(self):
        
         face_mesh_future = None
+        faces_post_process_future = None
         start_auth = True # TODO: find a better flow of control solutuon
 
         cached_frame = None
@@ -93,6 +121,9 @@ class Capture():
             labels = []
 
             fm_subprocess_started = False
+
+            if(faces_post_process_future):
+                faces_post_process_future.result() # We need this suprocess to block until completion to avoid race conditions on the next frame processing
 
             for xyxy, _, _, class_id, _, _ in detections:
                 entity_type = self.model.names[class_id]
@@ -124,11 +155,9 @@ class Capture():
                         self.faces_tracker.new_faces[new_face.face_id] = new_face
 
                 labels.append(f"{entity_type} ID:{res[1] if res else -1}")
-            
-            #TODO: We should try run this in its own thread not to waste resources
-            self.faces_tracker.swap_dict()
-            self.faces_tracker.add_new_faces_to_dict()
 
+            faces_post_process_future = self.thread_pool.submit(self.save_faces_post_processing)
+            
             # time_red = time.time()
 
             # obstacles = [

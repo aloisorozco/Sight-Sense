@@ -16,14 +16,22 @@ async function authenticatePerson(socket, personID){
     return new Promise((resolve, reject) =>{
 
         socket.emit('authenticate', Number(personID))
-        socket.on('auth_started', (data)=>{
-            resolve(data)
+
+        socket.on('auth_sucess', (data)=>{
+            resolve({call: "auth_sucess",
+                    data: data})
         })
         socket.on('user_in_no_rooms', (data)=>{
-            reject(data)
+            reject({call: "user_in_no_rooms",
+                    data: data})
         })
         socket.on('face_not_found', (data)=>{
-            reject(data)
+            reject({call: "face_not_found",
+                    data: data})
+        })
+        socket.on('auth_failed', (data)=>{
+            reject({call: "auth_failed",
+                    data: data})
         })
     })
 }
@@ -85,17 +93,26 @@ function SettingsScreen(props) {
     async function auth_human() {
         await authenticatePerson(webSocket, input_ref.current.value).then((res) =>{
             // TODO: Make this into an alert or something
-            console.log("all good")
-            setAuthAllowed(false)
+            if(res.call == 'auth_started'){
+                console.log(res.data)
+                setAuthAllowed(false)
+
+            }else if(res.call == 'auth_sucess'){
+                console.log(res.data)
+                setAuthAllowed(true)
+            }
+            
 
         }).catch((res) =>{
-            if(res == 401){
+
+            if(res.call == 'user_in_no_rooms'){
                 // TODO: Make this into an alert or something
-                console.log("User not in any room")
+                console.log(res.data)
                 setAuthAllowed(true)
-            }else if(res == 402){
+
+            }else if(res.call == 'face_not_found'){
                 // TODO: Make this into an alert or something
-                console.log("The ID entered is not valid - please type a valid one")
+                console.log(res.data)
                 setAuthAllowed(true)
             }
         })

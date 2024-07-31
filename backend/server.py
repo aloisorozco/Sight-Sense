@@ -4,6 +4,7 @@ import asyncio
 import concurrent.futures
 from detection.cv_capture import Capture
 from aiohttp import web
+import concurrent.futures
 
 class Server():
 
@@ -22,6 +23,7 @@ class Server():
     })
 
     _camera = None
+    _executor = concurrent.futures.ThreadPoolExecutor(max_workers=3)
 
     def __init__(self, camera) -> None:
         Server._camera = camera
@@ -36,9 +38,14 @@ class Server():
     async def lock_in_face(id):
         Capture.update_auth_target(id)
     
-    # TODO: look into other ways - idealy we should await an asynch function
+
     def check_face_existance(sid, id):
         return Capture.check_face_present(id)
+    
+
+    def await_auth_results():
+        res = Capture.notify_auth_res()
+        return res
 
 
     # this is not a socket opperation - just a standard HTTP request to see if server is alive
@@ -46,20 +53,26 @@ class Server():
         return web.Response(status=200)
     
 
-    @sio.on('authenticate') # TODO: Connect on the frontend
+    @sio.on('authenticate')
     async def authenticate(sid, data):
 
         if len(Server.sio.rooms(sid)) == 0:
-            await Server.sio.emit('user_in_no_rooms', 401, sid)
+            await Server.sio.emit('user_in_no_rooms', "user not in any streaming room", sid)
         else:
-            check_res = await asyncio.get_event_loop().run_in_executor(None, Server.check_face_existance, *(sid, data))
+            loop = asyncio.get_event_loop()
+
+            check_res = await loop.run_in_executor(Server._executor, Server.check_face_existance, *(sid, data))
             if (check_res):
                 Server.sio.start_background_task(Server.lock_in_face, data)
-                await Server.sio.emit('auth_started', 200, sid)
+                auth_res = await loop.run_in_executor(Server._executor, Server.await_auth_results)
+
+                if auth_res["auth_passed"]:
+                    await Server.sio.emit('auth_sucess', auth_res["comment"], sid)
+                else:
+                    await Server.sio.emit('auth_failed', auth_res["comment"] , sid)
 
             else:
-                print(f"person with ID {data} does not exist")
-                await Server.sio.emit('face_not_found', 402, sid) 
+                await Server.sio.emit('face_not_found', f'person with ID {data} does not exist', sid) 
             
 
     @sio.on('join_stream')

@@ -21,11 +21,17 @@ class Capture():
     _speech_thread = None
     _authenticate_id = None
 
+    _auth_res_mutex = threading.Lock()
+    auth_res_condition = threading.Condition(_auth_res_mutex)
+
+    _auth_res = {"auth_passed": None,
+                 "comment": None}
+
+    mutex = threading.Lock()
     _faces_dict_mutex = threading.Lock()
     _dict_udpated_condition = threading.Condition(_faces_dict_mutex)
     _dict_shared = {}
-
-    mutex = threading.Lock()
+    
 
     def __init__(self, args) -> None:
 
@@ -47,11 +53,37 @@ class Capture():
         
         # Load TTS and FaceMesh models
         # self.speech = tts.TTS()
-        self.face_mesh = FaceMesh(self.cap)
+        self.face_mesh = FaceMesh(self, self.cap)
 
         self.faces_tracker = FaceTracker()
         self.thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=3)
 
+        self.start_auth = True
+
+
+    @staticmethod
+    def update_auth_res(auth_res, comment):
+        Capture.auth_res_condition.acquire()
+
+        Capture._auth_res["auth_passed"] = auth_res
+        Capture._auth_res["comment"] = comment
+
+        Capture.auth_res_condition.notify()
+        Capture.auth_res_condition.release()
+
+
+    @staticmethod
+    def notify_auth_res():
+        Capture.auth_res_condition.acquire()
+        Capture.auth_res_condition.wait()
+
+        res = Capture._auth_res
+
+        Capture.auth_res_condition.release()
+
+        return res
+
+    @staticmethod   
     def check_face_present(face_id):
         Capture._dict_udpated_condition.acquire()
         Capture._dict_udpated_condition.wait()
@@ -63,6 +95,7 @@ class Capture():
         return res
     
     
+
     def save_faces_post_processing(self):
         Capture._dict_udpated_condition.acquire()
 
@@ -75,11 +108,14 @@ class Capture():
         Capture._dict_udpated_condition.release()
 
 
+    @staticmethod
     def update_auth_target(id):
         Capture.mutex.acquire()
         Capture._authenticate_id = id
         Capture.mutex.release()
 
+
+    @staticmethod
     def get_auth_id():
         Capture.mutex.acquire()
         id = Capture._authenticate_id
@@ -105,7 +141,6 @@ class Capture():
        
         face_mesh_future = None
         faces_post_process_future = None
-        start_auth = True # TODO: find a better flow of control solutuon
 
         cached_frame = None
 
@@ -138,8 +173,8 @@ class Capture():
                     if(auth_id is not None and res[0] and res[1] == auth_id and not fm_subprocess_started):
                         fm_subprocess_started = True
 
-                        if start_auth:
-                            start_auth = False
+                        if self.start_auth:
+                            self.start_auth = False
                             print(f"~~~~~~~~ Begingin Authentication procedure for the Person with Face ID {auth_id}")
                             self.face_mesh.gen_blink_sequence()
 

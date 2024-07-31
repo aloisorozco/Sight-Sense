@@ -14,9 +14,11 @@ class FaceMesh():
     TEMPORAL_WINDOW_MIN = 3
     TEMPORAL_WINDOW_MAX = 5
 
-    def __init__(self, cap):
+    def __init__(self, capture_referance, cap):
         
         self._timeout = None
+
+        self.capture_referance = capture_referance
 
         self.blink_counter = 0
         self.total_blinks = 0
@@ -114,45 +116,51 @@ class FaceMesh():
             auth_finished = False
 
             if results.multi_face_landmarks:
+                lms = results.multi_face_landmarks[0].landmark #we ever only face-mesh one person at a time for authentication, so can just get first elem in arr
 
-                for face_landmarks in results.multi_face_landmarks:
-                    lms = face_landmarks.landmark
+                raw_coords_dict = self._process_coords(self.leye_indeces, lms, frame, bbox_bottom_corner, coords_to_annotate)
+                lEAR = self._calc_blink(raw_coords_dict, FaceMesh._L_EIDS) if self._timeout else 0
 
-                    raw_coords_dict = self._process_coords(self.leye_indeces, lms, frame, bbox_bottom_corner, coords_to_annotate)
-                    lEAR = self._calc_blink(raw_coords_dict, FaceMesh._L_EIDS) if self._timeout else 0
+                raw_coords_dict = self._process_coords(self.reye_indeces, lms, frame, bbox_bottom_corner, coords_to_annotate)
+                rEAR = self._calc_blink(raw_coords_dict, FaceMesh._R_EIDS) if self._timeout else 0
 
-                    raw_coords_dict = self._process_coords(self.reye_indeces, lms, frame, bbox_bottom_corner, coords_to_annotate)
-                    rEAR = self._calc_blink(raw_coords_dict, FaceMesh._R_EIDS) if self._timeout else 0
+                raw_coords_dict = self._process_coords(self.face, lms, frame, bbox_bottom_corner, coords_to_annotate)
 
-                    raw_coords_dict = self._process_coords(self.face, lms, frame, bbox_bottom_corner, coords_to_annotate)
+                avg_EAR = (rEAR + lEAR) / 2
 
-                    avg_EAR = (rEAR + lEAR) / 2
+                if self._timeout:
 
-                    if self._timeout:
+                    if(int(time.time()) <= self._timeout):
+                        if avg_EAR < FaceMesh.EAR_THRESHOLD:
+                            self.blink_counter += 1
 
-                        if(int(time.time()) <= self._timeout):
-                            if avg_EAR < FaceMesh.EAR_THRESHOLD:
-                                self.blink_counter += 1
-
-                            else:
-                                if self.blink_counter >= self.temporal_window:
-                                    self.total_blinks += 1
-
-                                    if self.total_blinks == self.blink_goal:
-                                        # Here we will return a response indicating that the user is a human
-                                        print('Yipiee you did it congrats - you are a human!!!')
-                                        self._timeout = None
-                                        auth_finished = True
-
-                                    else:
-                                        print(f'---------------------------------- Blinks Remaining {self.blink_goal - self.total_blinks} ----------------------------------')
-
-                                self.blink_counter = 0
-                                
                         else:
-                            print('~~~~~~~~ TIMEOUT - re-authenticate with admin')
-                            self._timeout = None
-                            auth_finished = True
+                            if self.blink_counter >= self.temporal_window:
+                                self.total_blinks += 1
+
+                                if self.total_blinks == self.blink_goal:
+                                    # Here we are returning a response indicating that the target is a human
+                                    self.capture_referance.update_auth_res(True, "Human Authentication Successfull")
+                                    print('Yipiee you did it congrats - you are a human!!!')
+                                    self._timeout = None
+                                    auth_finished = True
+                                    self.capture_referance.start_auth = True
+
+                                else:
+                                    print(f'---------------------------------- Blinks Remaining {self.blink_goal - self.total_blinks} ----------------------------------')
+
+                            self.blink_counter = 0
+                            
+                    else:
+                        self.capture_referance.update_auth_res(False, "Nuh uh, not a human")
+                        print('~~~~~~~~ TIMEOUT - re-authenticate with admin')
+                        self._timeout = None
+                        auth_finished = True
+                        self.capture_referance.start_auth = True
+            
+            if auth_finished:
+                self.total_blinks = 0
+                self.blink_counter = 0
 
                 
-                return coords_to_annotate, auth_finished
+            return coords_to_annotate, auth_finished

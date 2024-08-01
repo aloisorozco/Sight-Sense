@@ -3,7 +3,7 @@ import axios from 'axios';
 import io from 'socket.io-client';
 import classes from "./main_view.module.css"
 import 'bootstrap/dist/css/bootstrap.min.css'
-// import Swal from 'sweetalert2'
+import Swal from 'sweetalert2'
 
 
 const VIDEO_URL = "http://127.0.0.1:5500/"
@@ -41,8 +41,8 @@ async function checkServerStatus() {
 
     return axios.get(VIDEO_URL + "status").then((res) => {
         return res
-    }).catch((err) => {
-        console.log(err)
+    }).catch((error) => {
+        console.log(error)
         return false
     })
 
@@ -92,27 +92,43 @@ function SettingsScreen(props) {
 
     async function auth_human() {
         await authenticatePerson(webSocket, input_ref.current.value).then((res) =>{
-            // TODO: Make this into an alert or something
-            if(res.call == 'auth_started'){
-                console.log(res.data)
-                setAuthAllowed(false)
+            if(res.call == 'auth_sucess'){
 
-            }else if(res.call == 'auth_sucess'){
-                console.log(res.data)
+                Swal.fire({
+                    icon: "success",
+                    title: "Yipee",
+                    text: res.data,
+                    confirmButtonColor: '#0D6EFD'
+                });
+
                 setAuthAllowed(true)
             }
-            
 
         }).catch((res) =>{
 
             if(res.call == 'user_in_no_rooms'){
-                // TODO: Make this into an alert or something
-                console.log(res.data)
+                
+                Swal.fire({
+                    icon: "error",
+                    title: "In no Rooms",
+                    text: res.data,
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    confirmButtonColor: '#0D6EFD'
+                });
+
                 setAuthAllowed(true)
 
             }else if(res.call == 'face_not_found'){
-                // TODO: Make this into an alert or something
-                console.log(res.data)
+              
+                Swal.fire({
+                    icon: "error",
+                    title: "No Face Found",
+                    text: res.data,
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    confirmButtonColor: '#0D6EFD'
+                });
                 setAuthAllowed(true)
             }
         })
@@ -143,6 +159,14 @@ function SettingsScreen(props) {
             } else {
                 console.log("Cant connect to serwer - I am going to break my monitaur I swaer")
             }
+
+        }else{
+            Swal.fire({
+                icon: "error",
+                title: "Server Unavailable",
+                text: "Make sure the server is on",
+                confirmButtonColor: '#0D6EFD'
+            });
         }
     }
 

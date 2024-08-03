@@ -65,7 +65,7 @@ class Capture():
     def update_auth_res(auth_res, comment):
         Capture.auth_res_condition.acquire()
 
-        Capture._auth_res["auth_passed"] = auth_res
+        Capture._auth_res["code"] = auth_res
         Capture._auth_res["comment"] = comment
 
         Capture.auth_res_condition.notify()
@@ -93,19 +93,6 @@ class Capture():
         Capture._dict_udpated_condition.release()
 
         return res
-    
-    
-
-    def save_faces_post_processing(self):
-        Capture._dict_udpated_condition.acquire()
-
-        self.faces_tracker.swap_dict()
-        self.faces_tracker.add_new_faces_to_dict()
-
-        Capture._dict_shared = self.faces_tracker.face_dict # TODO: May need to do a deep copy just to be safe
-        
-        Capture._dict_udpated_condition.notify()
-        Capture._dict_udpated_condition.release()
 
 
     @staticmethod
@@ -122,6 +109,23 @@ class Capture():
         Capture.mutex.release()
 
         return id
+
+
+    def save_faces_post_processing(self):
+        Capture._dict_udpated_condition.acquire()
+
+        self.faces_tracker.swap_dict()
+        self.faces_tracker.add_new_faces_to_dict()
+
+        Capture._dict_shared = self.faces_tracker.face_dict # TODO: May need to do a deep copy just to be safe
+        
+        Capture._dict_udpated_condition.notify()
+        Capture._dict_udpated_condition.release()
+
+
+    def kill_auth_process(self):
+        self.face_mesh.reset_auth()
+        Capture.update_auth_res("target_lost", "Target Face was lost - please move back into frame, hold still and re-authenticate")
 
     def _speak_messages(self, obstacles):
         for obstacle in obstacles:
@@ -155,10 +159,10 @@ class Capture():
             detections = sv.Detections.from_ultralytics(result)
             labels = []
 
-            fm_subprocess_started = False
-
             if(faces_post_process_future):
                 faces_post_process_future.result() # We need this suprocess to block until completion to avoid race conditions on the next frame processing
+
+            face_found = False
 
             for xyxy, _, _, class_id, _, _ in detections:
                 entity_type = self.model.names[class_id]
@@ -170,12 +174,12 @@ class Capture():
 
                     auth_id = Capture.get_auth_id()
 
-                    if(auth_id is not None and res[0] and res[1] == auth_id and not fm_subprocess_started):
-                        fm_subprocess_started = True
-
+                    if(auth_id is not None and res[0] and res[1] == auth_id):
+                        
+                        face_found = True
                         if self.start_auth:
                             self.start_auth = False
-                            print(f"~~~~~~~~ Begingin Authentication procedure for the Person with Face ID {auth_id}")
+                            print(f"~~~~~~~~ Begining Authentication procedure for the Person with Face ID {auth_id}")
                             self.face_mesh.gen_blink_sequence()
 
                             t1 = threading.Timer(interval=5.0, function=self.face_mesh.start_timeout)
@@ -190,6 +194,9 @@ class Capture():
                         self.faces_tracker.new_faces[new_face.face_id] = new_face
 
                 labels.append(f"{entity_type} ID:{res[1] if res else -1}")
+            
+            if not face_found and self.face_mesh.get_timeout():
+                self.kill_auth_process()
 
             faces_post_process_future = self.thread_pool.submit(self.save_faces_post_processing)
             

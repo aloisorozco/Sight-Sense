@@ -2,6 +2,7 @@ import cv2
 import random
 import time
 import mediapipe.python.solutions.face_mesh as face_mesh
+import threading
 
 class FaceMesh():
 
@@ -53,10 +54,17 @@ class FaceMesh():
 
         return list(landmark_set)
 
+    def get_timeout(self):
+        return self._timeout
+
     def start_timeout(self):
         print("Start Blinking!")
         self._timeout = int(time.time()) + 60
 
+    def reset_auth(self):
+        self.total_blinks = 0
+        self.blink_counter = 0
+        self._timeout = None
 
     # blink detection - source: https://peerj.com/articles/cs-943/
     def _calc_blink(self, coords_dict, ids_to_get):
@@ -140,7 +148,7 @@ class FaceMesh():
 
                                 if self.total_blinks == self.blink_goal:
                                     # Here we are returning a response indicating that the target is a human
-                                    self.capture_referance.update_auth_res(True, "Human Authentication Successfull")
+                                    self.capture_referance.update_auth_res('auth_sucess', "Human Authentication Successfull")
                                     print('Yipiee you did it congrats - you are a human!!!')
                                     self._timeout = None
                                     auth_finished = True
@@ -152,15 +160,14 @@ class FaceMesh():
                             self.blink_counter = 0
                             
                     else:
-                        self.capture_referance.update_auth_res(False, "Nuh uh, not a human")
+                        self.capture_referance.update_auth_res('auth_failed', "Nuh uh, not a human")
                         print('~~~~~~~~ TIMEOUT - re-authenticate with admin')
                         self._timeout = None
                         auth_finished = True
                         self.capture_referance.start_auth = True
             
             if auth_finished:
-                self.total_blinks = 0
-                self.blink_counter = 0
+                self.reset_auth()
 
                 
             return coords_to_annotate, auth_finished

@@ -21,6 +21,10 @@ async function authenticatePerson(socket, personID){
             resolve({call: "auth_sucess",
                     data: data})
         })
+        socket.on('auth_failed', (data)=>{
+            reject({call: "auth_failed",
+                    data: data})
+        })
         socket.on('user_in_no_rooms', (data)=>{
             reject({call: "user_in_no_rooms",
                     data: data})
@@ -29,8 +33,8 @@ async function authenticatePerson(socket, personID){
             reject({call: "face_not_found",
                     data: data})
         })
-        socket.on('auth_failed', (data)=>{
-            reject({call: "auth_failed",
+        socket.on('target_lost', (data)=>{
+            reject({call: "target_lost",
                     data: data})
         })
     })
@@ -90,48 +94,31 @@ function SettingsScreen(props) {
         }
     }, [])
 
+    // Daniel pls clean this up - you can make like a file or dict with all the code calls, and just genralise by reject and aceept
     async function auth_human() {
-        await authenticatePerson(webSocket, input_ref.current.value).then((res) =>{
-            if(res.call == 'auth_sucess'){
+        setAuthAllowed(false)
+        await authenticatePerson(webSocket, input_ref.current.value).then((res) => {
 
-                Swal.fire({
-                    icon: "success",
-                    title: "Yipee",
-                    text: res.data,
-                    confirmButtonColor: '#0D6EFD'
-                });
+            Swal.fire({
+                icon: "success",
+                title: res.call,
+                text: res.data,
+                confirmButtonColor: '#0D6EFD'
+            });
 
-                setAuthAllowed(true)
-            }
+        }).catch((res) => {
 
-        }).catch((res) =>{
-
-            if(res.call == 'user_in_no_rooms'){
-                
-                Swal.fire({
-                    icon: "error",
-                    title: "In no Rooms",
-                    text: res.data,
-                    allowOutsideClick: false,
-                    allowEscapeKey: false,
-                    confirmButtonColor: '#0D6EFD'
-                });
-
-                setAuthAllowed(true)
-
-            }else if(res.call == 'face_not_found'){
-              
-                Swal.fire({
-                    icon: "error",
-                    title: "No Face Found",
-                    text: res.data,
-                    allowOutsideClick: false,
-                    allowEscapeKey: false,
-                    confirmButtonColor: '#0D6EFD'
-                });
-                setAuthAllowed(true)
-            }
+            Swal.fire({
+                icon: "error",
+                title: res.call,
+                text: res.data,
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                confirmButtonColor: '#0D6EFD'
+            });
         })
+
+        setAuthAllowed(true)
     }
 
     async function startStream() {

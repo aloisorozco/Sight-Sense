@@ -66,10 +66,7 @@ class Server():
                 Server.sio.start_background_task(Server.lock_in_face, data)
                 auth_res = await loop.run_in_executor(Server._executor, Server.await_auth_results)
 
-                if auth_res["auth_passed"]:
-                    await Server.sio.emit('auth_sucess', auth_res["comment"], sid)
-                else:
-                    await Server.sio.emit('auth_failed', auth_res["comment"] , sid)
+                await Server.sio.emit(auth_res["code"], auth_res["comment"], sid)
 
             else:
                 await Server.sio.emit('face_not_found', f'person with ID {data} does not exist', sid) 

@@ -58,7 +58,7 @@ class Capture():
         self.faces_tracker = FaceTracker()
         self.thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=3)
 
-        self.start_auth = True
+        self.auth_timeout_timer = None
 
 
     @staticmethod
@@ -124,6 +124,10 @@ class Capture():
 
 
     def kill_auth_process(self):
+        if self.auth_timeout_timer:
+            self.auth_timeout_timer.cancel()
+
+        self.auth_timeout_timer = None
         self.face_mesh.reset_auth()
         Capture.update_auth_res("target_lost", "Target Face was lost - please move back into frame, hold still and re-authenticate")
 
@@ -177,13 +181,12 @@ class Capture():
                     if(auth_id is not None and res[0] and res[1] == auth_id):
                         
                         face_found = True
-                        if self.start_auth:
-                            self.start_auth = False
+                        if not self.auth_timeout_timer:
                             print(f"~~~~~~~~ Begining Authentication procedure for the Person with Face ID {auth_id}")
                             self.face_mesh.gen_blink_sequence()
 
-                            t1 = threading.Timer(interval=5.0, function=self.face_mesh.start_timeout)
-                            t1.start()
+                            self.auth_timeout_timer = threading.Timer(interval=5.0, function=self.face_mesh.start_timeout)
+                            self.auth_timeout_timer.start()
 
                         
                         target_face_img = frame[int(xyxy[1]):int(xyxy[3]), int(xyxy[0]):int(xyxy[2])] # only processing the section of the frame which is the person's face
@@ -194,11 +197,11 @@ class Capture():
                         self.faces_tracker.new_faces[new_face.face_id] = new_face
 
                 labels.append(f"{entity_type} ID:{res[1] if res else -1}")
-            
-            if not face_found and self.face_mesh.get_timeout():
-                self.kill_auth_process()
 
             faces_post_process_future = self.thread_pool.submit(self.save_faces_post_processing)
+
+            if not face_found and self.auth_timeout_timer:
+                self.kill_auth_process()
             
             # time_red = time.time()
 
@@ -242,7 +245,7 @@ class Capture():
                 self.face_mesh.draw(frame, coords_to_draw)
 
                 # TODO: Make sure this does not cause the capture thread to block - stress test it
-                if auth_finished:
+                if auth_finished or not face_found:
                     frame = cached_frame
                     Capture.update_auth_target(None)
 

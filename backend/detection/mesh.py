@@ -21,7 +21,6 @@ class FaceMesh():
 
         self.capture_referance = capture_referance
 
-        self.blink_counter = 0
         self.total_blinks = 0
         self.temporal_window  = 3
         self.blink_goal = 3
@@ -44,7 +43,8 @@ class FaceMesh():
                                                 refine_landmarks=True,
                                                 min_detection_confidence=0.7,
                                                 min_tracking_confidence=0.5)
-
+        
+        self.last_blink_time = None
     
     def _get_unique_landmark(self, landmarks):
         landmark_set = set()
@@ -59,11 +59,11 @@ class FaceMesh():
 
     def start_timeout(self):
         print("Start Blinking!")
-        self._timeout = int(time.time()) + 60
+        self._timeout = int(time.time()) + 30
 
     def reset_auth(self):
         self.total_blinks = 0
-        self.blink_counter = 0
+        self.last_blink_time = None
         self._timeout = None
 
     # blink detection - source: https://peerj.com/articles/cs-943/
@@ -105,7 +105,7 @@ class FaceMesh():
     def gen_blink_sequence(self):
         self.blink_goal = random.randint(FaceMesh.MIN_BLINKS, FaceMesh.MAX_BLINKS)
         self.temporal_window = random.randint(FaceMesh.TEMPORAL_WINDOW_MIN, FaceMesh.TEMPORAL_WINDOW_MAX)
-        print(f"~~~~~~~~ After coundown, perform {self.blink_goal} blinks, each blink lasting {self.temporal_window}")
+        print(f"~~~~~~~~ After coundown, perform {self.blink_goal} blinks, each blink lasting {self.temporal_window} seconds")
 
 
     def ptp(self):
@@ -139,32 +139,31 @@ class FaceMesh():
                 if self._timeout:
 
                     if(int(time.time()) <= self._timeout):
-                        if avg_EAR < FaceMesh.EAR_THRESHOLD:
-                            self.blink_counter += 1
+                        if avg_EAR <= FaceMesh.EAR_THRESHOLD:
+                            if not self.last_blink_time:
+                                self.last_blink_time = int(time.time())
 
                         else:
-                            if self.blink_counter >= self.temporal_window:
+                            if self.last_blink_time and int(time.time()) - self.last_blink_time >= self.temporal_window:
                                 self.total_blinks += 1
 
                                 if self.total_blinks == self.blink_goal:
                                     # Here we are returning a response indicating that the target is a human
                                     self.capture_referance.update_auth_res('auth_sucess', "Human Authentication Successfull")
                                     print('Yipiee you did it congrats - you are a human!!!')
-                                    self._timeout = None
                                     auth_finished = True
-                                    self.capture_referance.start_auth = True
+                                    self.capture_referance.auth_timeout_timer = None
 
                                 else:
                                     print(f'---------------------------------- Blinks Remaining {self.blink_goal - self.total_blinks} ----------------------------------')
 
-                            self.blink_counter = 0
+                            self.last_blink_time = None
                             
                     else:
                         self.capture_referance.update_auth_res('auth_failed', "Nuh uh, not a human")
                         print('~~~~~~~~ TIMEOUT - re-authenticate with admin')
-                        self._timeout = None
                         auth_finished = True
-                        self.capture_referance.start_auth = True
+                        self.capture_referance.auth_timeout_timer = None
             
             if auth_finished:
                 self.reset_auth()

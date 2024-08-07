@@ -25,8 +25,8 @@ async function authenticatePerson(socket, personID){
             reject({call: "auth_failed",
                     data: data})
         })
-        socket.on('user_in_no_rooms', (data)=>{
-            reject({call: "user_in_no_rooms",
+        socket.on('auht_client_disconnected', (data)=>{
+            reject({call: "auht_client_disconnected",
                     data: data})
         })
         socket.on('face_not_found', (data)=>{
@@ -35,6 +35,10 @@ async function authenticatePerson(socket, personID){
         })
         socket.on('target_lost', (data)=>{
             reject({call: "target_lost",
+                    data: data})
+        })
+        socket.on('auth_in_progress', (data)=>{
+            reject({call: "auth_in_progress",
                     data: data})
         })
     })

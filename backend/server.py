@@ -24,6 +24,9 @@ class Server():
 
     _camera = None
     _executor = concurrent.futures.ThreadPoolExecutor(max_workers=3)
+    _mutex = asyncio.Lock()
+    _auth_status = {"sid": None,
+                    "status": "n/a"}
 
     def __init__(self, camera) -> None:
         Server._camera = camera
@@ -56,27 +59,44 @@ class Server():
     @sio.on('authenticate')
     async def authenticate(sid, data):
 
-        if len(Server.sio.rooms(sid)) == 0:
-            await Server.sio.emit('user_in_no_rooms', "user not in any streaming room", sid)
+        await Server._mutex.acquire()
+        if Server._auth_status["sid"] is not None and Server._auth_status["status"] != "finished":
+            await Server.sio.emit('auth_in_progress', "Another user has already started to auth", to=sid)
+            Server._mutex.release()
+            return
+
         else:
-            loop = asyncio.get_event_loop()
+            Server._auth_status["sid"] = sid
+            Server._auth_status["status"] = "started"
 
-            check_res = await loop.run_in_executor(Server._executor, Server.check_face_existance, *(sid, data))
-            if (check_res):
-                Server.sio.start_background_task(Server.lock_in_face, data)
-                auth_res = await loop.run_in_executor(Server._executor, Server.await_auth_results)
+        Server._mutex.release()
 
-                await Server.sio.emit(auth_res["code"], auth_res["comment"], sid)
+        loop = asyncio.get_event_loop()
 
+        check_res = await loop.run_in_executor(Server._executor, Server.check_face_existance, *(sid, data))
+        if (check_res):
+            Server.sio.start_background_task(Server.lock_in_face, data)
+            auth_res = await loop.run_in_executor(Server._executor, Server.await_auth_results)
+
+            if len(Server.sio.rooms(sid)) == 0:
+                await Server.sio.emit(auth_res["code"], auth_res["comment"], room='super_secret_security_camera_broadcast') # does not work - need to fix
             else:
-                await Server.sio.emit('face_not_found', f'person with ID {data} does not exist', sid) 
+                await Server.sio.emit(auth_res["code"], auth_res["comment"], to=sid)
+
+        else:
+            await Server.sio.emit('face_not_found', f'person with ID {data} does not exist', to=sid) 
+
+        await Server._mutex.acquire()
+        Server._auth_status["sid"] = sid
+        Server._auth_status["status"] = "finished"
+        Server._mutex.release()
             
 
     @sio.on('join_stream')
     async def join_stream(sid):
         print(f'----- {sid} joined security broadcast stream -----')
         await Server.sio.enter_room(sid, 'super_secret_security_camera_broadcast')
-        await Server.sio.emit('join_stream_confirmation', 200, sid)
+        await Server.sio.emit('join_stream_confirmation', 200, to=sid)
 
 
     @sio.on('connect')
@@ -88,14 +108,19 @@ class Server():
     @sio.on('disconnect')
     async def disconnect(sid):
         print('Client disconnected:', sid)
-        
-    
+
+        await  Server._mutex.acquire()
+        if sid == Server._auth_status["sid"] and Server._auth_status["sid"] != "finished":
+            Server._camera.kill_auth_process("auht_client_disconnected", "Cleint that started the auth process disconnected mid-auth. Canceling auth.")# kill the auth_process
+        Server._mutex.release()
+
+            
     @sio.on('end_stream')
     async def end_stream(sid):
         # Server._camera.set_end_stream(True) # Ends stream for everyone by killing model - idealy we will have model run all the time and broadcast video to a cloud server
         print(f'Ending Stream for {sid}')
         await Server.sio.leave_room(sid, 'super_secret_security_camera_broadcast')
-        await Server.sio.emit('stream_exit_res', 200, sid)
+        await Server.sio.emit('stream_exit_res', 200, to=sid)
 
 
     # Factory app init to start backround process

@@ -41,7 +41,7 @@ class Capture():
         # Capture vide + load model
         self.cap = cv2.VideoCapture(0)
         # self.model = YOLO("yolov8n.pt")
-        self.model = YOLO("faces_30.pt")
+        self.model = YOLO("backend/faces_30.pt")
         self.model.fuse()
 
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, frame_width)
@@ -123,13 +123,14 @@ class Capture():
         Capture._dict_udpated_condition.release()
 
 
-    def kill_auth_process(self):
+    def kill_auth_process(self, code, reason):
         if self.auth_timeout_timer:
             self.auth_timeout_timer.cancel()
 
         self.auth_timeout_timer = None
         self.face_mesh.reset_auth()
-        Capture.update_auth_res("target_lost", "Target Face was lost - please move back into frame, hold still and re-authenticate")
+        Capture.update_auth_target(None)
+        Capture.update_auth_res(code, reason)
 
     def _speak_messages(self, obstacles):
         for obstacle in obstacles:
@@ -201,7 +202,7 @@ class Capture():
             faces_post_process_future = self.thread_pool.submit(self.save_faces_post_processing)
 
             if not face_found and self.auth_timeout_timer:
-                self.kill_auth_process()
+                self.kill_auth_process("target_lost", "Target Face was lost - please move back into frame, hold still and re-authenticate")
             
             # time_red = time.time()
 

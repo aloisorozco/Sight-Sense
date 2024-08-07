@@ -12,8 +12,8 @@ class FaceMesh():
     EAR_THRESHOLD = 0.2
     MAX_BLINKS = 7
     MIN_BLINKS = 3
-    TEMPORAL_WINDOW_MIN = 3
-    TEMPORAL_WINDOW_MAX = 5
+    TEMPORAL_WINDOW_MIN = 1
+    TEMPORAL_WINDOW_MAX = 3
 
     def __init__(self, capture_referance, cap):
         
@@ -59,7 +59,7 @@ class FaceMesh():
 
     def start_timeout(self):
         print("Start Blinking!")
-        self._timeout = int(time.time()) + 30
+        self._timeout = int(time.time()) + 60
 
     def reset_auth(self):
         self.total_blinks = 0

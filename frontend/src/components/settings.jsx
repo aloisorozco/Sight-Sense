@@ -25,8 +25,8 @@ async function authenticatePerson(socket, personID){
             reject({call: "auth_failed",
                     data: data})
         })
-        socket.on('auht_client_disconnected', (data)=>{
-            reject({call: "auht_client_disconnected",
+        socket.on('auth_client_disconnected', (data)=>{
+            reject({call: "auth_client_disconnected",
                     data: data})
         })
         socket.on('face_not_found', (data)=>{
@@ -101,8 +101,11 @@ function SettingsScreen(props) {
     // Daniel pls clean this up - you can make like a file or dict with all the code calls, and just genralise by reject and aceept
     async function auth_human() {
         setAuthAllowed(false)
+
+        let call = null
         await authenticatePerson(webSocket, input_ref.current.value).then((res) => {
 
+            call =  res.call
             Swal.fire({
                 icon: "success",
                 title: res.call,
@@ -112,6 +115,7 @@ function SettingsScreen(props) {
 
         }).catch((res) => {
 
+            call =  res.call
             Swal.fire({
                 icon: "error",
                 title: res.call,
@@ -122,7 +126,13 @@ function SettingsScreen(props) {
             });
         })
 
-        setAuthAllowed(true)
+        if (call == "auth_client_disconnected"){
+            setAuthAllowed(false)
+        }else{
+            setAuthAllowed(true)
+        }
+
+        
     }
 
     async function startStream() {

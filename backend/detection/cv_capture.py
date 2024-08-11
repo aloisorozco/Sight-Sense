@@ -41,7 +41,7 @@ class Capture():
         # Capture vide + load model
         self.cap = cv2.VideoCapture(0)
         # self.model = YOLO("yolov8n.pt")
-        self.model = YOLO("backend/faces_30.pt")
+        self.model = YOLO("faces_30.pt")
         self.model.fuse()
 
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, frame_width)

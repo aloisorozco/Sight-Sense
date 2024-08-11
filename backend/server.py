@@ -31,24 +31,33 @@ class Server():
     def __init__(self, camera) -> None:
         Server._camera = camera
     
-
-    async def capture_and_send(self):
+    @staticmethod
+    async def capture_and_send():
         for encoded_frame in Server._camera.start_capture():
             await Server.sio.emit('frame', encoded_frame, room='super_secret_security_camera_broadcast')
             await Server.sio.sleep(0.01)
 
-
+    @staticmethod
     async def lock_in_face(id):
         Capture.update_auth_target(id)
     
-
+    @staticmethod
     def check_face_existance(sid, id):
         return Capture.check_face_present(id)
     
-
+    @staticmethod
     def await_auth_results():
         res = Capture.notify_auth_res()
         return res
+    
+
+    @staticmethod
+    async def handle_disconnect_stream_stop(sid):
+        await Server._mutex.acquire()
+        if sid == Server._auth_status["sid"] and Server._auth_status["sid"] != "finished":
+            Server._camera.kill_auth_process("auth_client_disconnected", "Cleint that started the auth process disconnected mid-auth. Canceling auth.")# kill the auth_process
+        
+        Server._mutex.release()
 
 
     # this is not a socket opperation - just a standard HTTP request to see if server is alive
@@ -78,8 +87,9 @@ class Server():
             Server.sio.start_background_task(Server.lock_in_face, data)
             auth_res = await loop.run_in_executor(Server._executor, Server.await_auth_results)
 
-            if len(Server.sio.rooms(sid)) == 0:
-                await Server.sio.emit(auth_res["code"], auth_res["comment"], room='super_secret_security_camera_broadcast') # does not work - need to fix
+            if "super_secret_security_camera_broadcast" not in Server.sio.rooms(sid):
+                print(auth_res['code'])
+                await Server.sio.emit(auth_res['code'], auth_res['comment'])
             else:
                 await Server.sio.emit(auth_res["code"], auth_res["comment"], to=sid)
 
@@ -108,11 +118,7 @@ class Server():
     @sio.on('disconnect')
     async def disconnect(sid):
         print('Client disconnected:', sid)
-
-        await  Server._mutex.acquire()
-        if sid == Server._auth_status["sid"] and Server._auth_status["sid"] != "finished":
-            Server._camera.kill_auth_process("auht_client_disconnected", "Cleint that started the auth process disconnected mid-auth. Canceling auth.")# kill the auth_process
-        Server._mutex.release()
+        await Server.handle_disconnect_stream_stop(sid)
 
             
     @sio.on('end_stream')
@@ -122,10 +128,11 @@ class Server():
         await Server.sio.leave_room(sid, 'super_secret_security_camera_broadcast')
         await Server.sio.emit('stream_exit_res', 200, to=sid)
 
+        await Server.handle_disconnect_stream_stop(sid)
 
     # Factory app init to start backround process
     async def init_app(self):
-        Server.sio.start_background_task(Server.capture_and_send, self)
+        Server.sio.start_background_task(Server.capture_and_send)
         return Server.app
 
     # Add route to CORS

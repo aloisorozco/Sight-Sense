@@ -16,6 +16,7 @@
     "socket.io-client": "^4.7.5",
     "styled-components": "^6.1.11",
     "sweetalert2": "^11.12.2",
+    "typescript": "^5.5.4",
     "web-vitals": "^2.1.4"
   },
   "scripts": {

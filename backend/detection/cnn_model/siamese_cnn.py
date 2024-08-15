@@ -1,6 +1,7 @@
 #well merge the CNN with the rest of the layers here
 from tensorflow.python.keras.models import Model
 from tensorflow.python.keras.layers import Dense, Conv2D, Input, MaxPool2D, Flatten
+from tensorflow.python.keras.optimizers import adam_v2
 
 class Siamese_CNN(Model):
     
@@ -8,6 +9,7 @@ class Siamese_CNN(Model):
         super().__init__()
         self._cnn = self._make_cnn(shape, chanels)
         self.dense_sigmoid = Dense(1, activation='sigmoid')
+        self.opt = adam_v2.Adam()
 
     
     def _make_cnn(self, shape, chanels):

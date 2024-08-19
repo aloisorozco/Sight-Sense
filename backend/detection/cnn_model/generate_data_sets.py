@@ -4,6 +4,8 @@ import uuid
 import cv2 as cv
 import random
 import os
+from itertools import combinations, product
+from csv import writer
 
 AUTHED_DIR = "backend/detection/cnn_model/authed_people"
 TRAIN_BAD_DIR = "backend/detection/cnn_model/train_raw"
@@ -11,6 +13,8 @@ TRAIN_CLEAN_DIR = "backend/detection/cnn_model/train"
 
 VALID_BAD_DIR = "backend/detection/cnn_model/val_raw"
 VALID_CLEAN_DIR = "backend/detection/cnn_model/val"
+
+CSV_PATH = "backend/detection/cnn_model/dataset.csv"
 
 def collect_my_faces():
     cap = cv.VideoCapture(0)
@@ -66,5 +70,33 @@ def clean_data_sets(raw_img_dir_path, clean_img_dir):
         counter += 1
 
 
-clean_data_sets(TRAIN_BAD_DIR, TRAIN_CLEAN_DIR)
-clean_data_sets(VALID_BAD_DIR, VALID_CLEAN_DIR)
+def populate_csv_dataset():
+    authed = os.listdir(AUTHED_DIR)
+    not_authed = os.listdir(TRAIN_CLEAN_DIR)
+
+    good_pairs = list(combinations(authed, 2))
+    bad_pairs = list(product(authed, not_authed))
+                     
+    data_set = []
+
+    with open(CSV_PATH, 'a') as f_object:
+        wo = writer(f_object)
+        for img1_authed, img2_authed, in good_pairs:
+            data_set.append([f'{AUTHED_DIR}/{img1_authed}', f'{AUTHED_DIR}/{img2_authed}', 1])
+            
+        for img1_authed, img2_bad, in bad_pairs:
+            data_set.append([f'{AUTHED_DIR}/{img1_authed}', f'{TRAIN_CLEAN_DIR}/{img2_bad}', 0])
+        
+        random.shuffle(data_set)
+        wo.writerows(data_set)
+            
+
+
+# ------ collect + clean data ------
+# collect_my_faces()
+# clean_data_sets(TRAIN_BAD_DIR, TRAIN_CLEAN_DIR)
+# clean_data_sets(VALID_BAD_DIR, VALID_CLEAN_DIR)
+
+# ------ make img pairs + log into CSV ------
+# populate_csv_dataset()
+        

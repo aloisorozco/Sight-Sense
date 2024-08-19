@@ -1,25 +1,51 @@
-function add(n1: number | string, n2: number | string) {
+export function runCommands(): boolean {
 
-    if (typeof n1 === 'number' && typeof n2 === 'number'){
-        return n1 + n2;
+    let available_resource: "Food" | "Water" | null = null
+    let day: number = 1
+    let food: number = 5
+    let water: number = 5
+    let dice_val: number = 0
+
+    while(true){
+        if(day == 7){
+            return true
+        }
+
+        dice_val = rollDice(6,1)
+
+        switch(dice_val){
+            case 1:
+                available_resource = "Food"
+            case 2:
+                available_resource = "Water"
+            default:
+                if(available_resource == null){
+
+                    available_resource = dice_val % 2 == 0 ? "Food": "Water"
+
+                }
+                else if(available_resource == "Food"){
+                    food += dice_val
+                    available_resource = null
+                }
+                else{
+                    water += dice_val
+                    available_resource = null
+                }
+        }
+
+
+        water--
+        food --
+        day++
+
+        if(food == 0 || water == 0){
+            return false
+        }
     }
-    return n1.toString() + n2.toString()
+	
 }
 
-var person = {
-    arr: ["sports", 1]
-};
-var arr;
-arr = [];
-// arr.push(1)
-arr.push("str1");
-for (var _i = 0, arr_1 = arr; _i < arr_1.length; _i++) {
-    var i = arr_1[_i];
-    console.log(i.toUpperCase());
+function rollDice(max: number, min: number): number{
+    return Math.floor(Math.random() * (max - min + 1) + min)
 }
-var n1 = 5;
-var n2 = 2.8;
-var tuple;
-tuple = [4, '4'];
-tuple[0] = 55;
-console.log(tuple);

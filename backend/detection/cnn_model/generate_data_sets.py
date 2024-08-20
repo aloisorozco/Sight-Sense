@@ -45,7 +45,7 @@ def collect_my_faces():
         if rand <= 0.25:
             frame = cv.warpAffine(frame, rotation, (105,105))
 
-        cv.imwrite(f"{AUTHED_DIR}/{uuid.uuid1()}.jpg", frame)
+        cv.imwrite(f"{AUTHED_DIR}/{uuid.uuid1()}.png", frame)
        
         if cv.waitKey(1) == ord('q'):
             break
@@ -66,7 +66,7 @@ def clean_data_sets(raw_img_dir_path, clean_img_dir):
         img = cv.imread(f"{raw_img_dir_path}/{image_name}")
         img = cv.resize(img, (105,105), interpolation=cv.INTER_AREA)
 
-        cv.imwrite(f"{clean_img_dir}/{counter}.jpg", img)
+        cv.imwrite(f"{clean_img_dir}/{counter}.png", img)
         counter += 1
 
 
@@ -93,10 +93,9 @@ def populate_csv_dataset():
 
 
 # ------ collect + clean data ------
-# collect_my_faces()
-# clean_data_sets(TRAIN_BAD_DIR, TRAIN_CLEAN_DIR)
-# clean_data_sets(VALID_BAD_DIR, VALID_CLEAN_DIR)
+collect_my_faces()
+clean_data_sets(TRAIN_BAD_DIR, TRAIN_CLEAN_DIR)
 
 # ------ make img pairs + log into CSV ------
-# populate_csv_dataset()
+populate_csv_dataset()
         

@@ -1,41 +1,54 @@
 # from siamese_cnn import Siamese_CNN
-from tensorflow.python.keras.optimizers import adam_v2
-from tensorflow.python.keras.metrics import BinaryAccuracy
 import tensorflow as tf
-import pandas as pd
+from keras.optimizers import Adam
+from keras.metrics import BinaryAccuracy
+from siamese_cnn import Siamese_CNN
+import csv
+
 
 CSV_PATH = "backend/detection/cnn_model/dataset.csv"
 CSV_SMOL_PATH = "backend/detection/cnn_model/smol.csv"
+MODEL_REPO = "backend/detection/cnn_model/scnn_custom"
 
-dataset_df = pd.read_csv(CSV_SMOL_PATH)
-val_size = int(len(dataset_df) * 0.2)
-train_size = len(dataset_df) - val_size
-
-x_train = []
-y_train = []
-
-x_val = []
-y_val = []
+dataset_pre_x = []
+dataset_pre_y = []
 
 def decode_img(row):
-    img1 = tf.io.read_file(row.iloc[0])
-    img2 = tf.io.read_file(row.iloc[1])
+    img1 = tf.io.read_file(row[0])
+    img2 = tf.io.read_file(row[1])
 
-    row.iloc[0] = tf.io.decode_jpeg(img1, channels=1)
-    row.iloc[1] = tf.io.decode_jpeg(img2, channels=1)
-    return row
+    decoded_img1 = tf.io.decode_jpeg(img1, channels=1)
+    decoded_img2 = tf.io.decode_jpeg(img2, channels=1)
+    return decoded_img1, decoded_img2
 
-dataset_df = dataset_df.apply(decode_img, axis=1)
-print('done')
-print(dataset_df)
-# train_df = dataset_df.iloc[0: train_size]
-# val_df = dataset_df.iloc[train_size:]
+def configure_for_performance(dataset):
+    dataset = dataset.cache()
+    dataset = dataset.shuffle(buffer_size=1000)
+    dataset = dataset.batch(32)
+    return dataset
 
-# print(train_df)
+with open(CSV_SMOL_PATH, 'r') as file:
+    reader = csv.reader(file)
+    for row in reader:
+        if row[0] == "img1":
+            continue
+        dataset_pre_x.append(decode_img(row))
+        dataset_pre_y.append(int(row[2]))
 
-# TODO: figure out a way to vecotrize all the immages in the CSV - maybe look into how it is done with custom dataset of words or somehthing like that
-# print(dataset_df)
+dataset = tf.data.Dataset.from_tensor_slices((dataset_pre_x, dataset_pre_y))
+split_index = int(len(dataset_pre_x) * 0.8)
 
-# scnn = Siamese_CNN(105, 3)
-# opt = adam_v2.Adam()
-# scnn.compile(loss='binary_crossentropy', optimizer=opt, metrics=[BinaryAccuracy()])
+train_dataset = dataset.take(split_index)
+val_dataset = dataset.skip(split_index)
+
+train_dataset = configure_for_performance(train_dataset)
+val_dataset = configure_for_performance(val_dataset)
+
+print("trining model")
+
+scnn = Siamese_CNN(105, 1)
+opt = Adam()
+scnn.compile(loss='binary_crossentropy', optimizer=opt, metrics=[BinaryAccuracy()])
+hist = scnn.fit(train_dataset, validation_data=val_dataset)
+print(hist)
+scnn.save(MODEL_REPO, save_format='tf')

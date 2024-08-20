@@ -1,7 +1,7 @@
 #well merge the CNN with the rest of the layers here
-from tensorflow.python.keras.models import Model
-from tensorflow.python.keras.layers import Dense, Conv2D, Input, MaxPool2D, Flatten
-from tensorflow.python.keras.optimizers import adam_v2
+from tensorflow import keras
+from keras.models import Model
+from keras.layers import Dense, Conv2D, Input, MaxPool2D, Flatten
 
 class Siamese_CNN(Model):
     
@@ -12,7 +12,7 @@ class Siamese_CNN(Model):
 
     
     def _make_cnn(self, shape, chanels):
-        input = Input(shape=(shape,chanels))
+        input = Input(shape=(shape, shape, chanels))
 
         c1 = Conv2D(kernel_size=10, filters=64, activation='relu')(input)
         m1 = MaxPool2D()(c1)
@@ -34,10 +34,12 @@ class Siamese_CNN(Model):
         return embedings_im1 - embedings_im2
     
 
-    def call(self, inputs):
-        img1, img2 = inputs
+    def call(self, inputs, **kwargs):
+        img1 = inputs[:, 0, :, :, :]
+        img2 = inputs[:, 1, :, :, :]
+
         embedings_im1 = self._cnn(img1)
         embedings_im2 = self._cnn(img2)
-
+        
         embedings_diff = self._vector_diff(embedings_im1, embedings_im2)
         return self.dense_sigmoid(embedings_diff)

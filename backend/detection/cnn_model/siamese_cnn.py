@@ -9,7 +9,6 @@ class Siamese_CNN(Model):
         super().__init__()
         self._cnn = self._make_cnn(shape, chanels)
         self.dense_sigmoid = Dense(1, activation='sigmoid')
-        self.opt = adam_v2.Adam()
 
     
     def _make_cnn(self, shape, chanels):

@@ -50,12 +50,12 @@ We utilized asyncio with socketio to create a Python server to host the models a
 We plan the following for the near future:
 - Deploy Website
 - Port to mobile app
+- Re-write our frontend in TS (why? Because we can 😎)
 - Demo Video - so we can flex all the other cool features that we did not outline here
 - More cool AI stuff we don't want to spoil (although this repo is public so you probably can figure it out through our code if you want 👀)
 
 
 # Tech Stack
-- Python
-- asyncio, socketio
-- JS, React
+- Python, asyncio, socketio
 - OpenCV, YOLOv8, Keras, Tensorflow
+- JS, React

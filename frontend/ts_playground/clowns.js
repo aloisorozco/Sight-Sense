@@ -57,4 +57,3 @@ if (matchingsDescription.length) {
 else {
     console.log("Nobody gets a clown. Terrible party. Goodbye.");
 }
-//# sourceMappingURL=clowns.js.map

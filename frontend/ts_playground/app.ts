@@ -1,51 +1,65 @@
-export function runCommands(): boolean {
+// Write your createCipher function here! ✨
+// You'll need to export it so the tests can run it.
 
-    let available_resource: "Food" | "Water" | null = null
-    let day: number = 1
-    let food: number = 5
-    let water: number = 5
-    let dice_val: number = 0
+type Cypher = (txt: string) => string
+type Stronk = (input: string) => string
 
-    while(true){
-        if(day == 7){
-            return true
+type StronkNew = (input: string) => string | undefined
+type Guess = (text: string, attempt: number) => string
+type ValidateGuess = (text: string) => boolean
+
+const vowels: string[] = ["a", "e", "i", "o", "u"] 
+const consonant: string[] = [  "b", "c", "d", "f", "g", "h", "j", "k", "l", "m", "n", "p", "q", "r", "s", "t", "v", "w", "x", "y", "z"] 
+
+
+function createCipher(cipher: Cypher): Stronk{
+
+    return (txt) =>{
+        let final_str: string = ""
+
+        for(const i of txt){
+            final_str = final_str.concat(cipher(i))
         }
 
-        dice_val = rollDice(6,1)
-
-        switch(dice_val){
-            case 1:
-                available_resource = "Food"
-            case 2:
-                available_resource = "Water"
-            default:
-                if(available_resource == null){
-
-                    available_resource = dice_val % 2 == 0 ? "Food": "Water"
-
-                }
-                else if(available_resource == "Food"){
-                    food += dice_val
-                    available_resource = null
-                }
-                else{
-                    water += dice_val
-                    available_resource = null
-                }
-        }
-
-
-        water--
-        food --
-        day++
-
-        if(food == 0 || water == 0){
-            return false
-        }
+        return final_str
     }
-	
 }
 
-function rollDice(max: number, min: number): number{
-    return Math.floor(Math.random() * (max - min + 1) + min)
+function createAdvancedCipher(onVowel: Stronk, onConsonant: Stronk, onPunctuation: Stronk): Stronk{
+
+    return (txt) =>{
+        let final_str: string = ""
+
+        for(const i of txt){
+            if(vowels.includes(i)){
+                final_str = final_str.concat(onVowel(i))
+            }
+            if(consonant.includes(i)){
+                final_str = final_str.concat(onConsonant(i))
+            }
+            else{
+                final_str = final_str.concat(onPunctuation(i))
+            }
+        }
+
+        return final_str
+    }
 }
+
+function createCodeCracker(attempts: number, makeGuess: Guess, validateGuess: ValidateGuess ): StronkNew{
+
+    return (txt) =>{
+        let good_guess : string | undefined = undefined;
+
+        for(let i = 1; i < attempts; i++){
+            good_guess = makeGuess(txt, i)
+            if (validateGuess(good_guess)){
+                return good_guess
+            }
+        }
+        return good_guess
+    }
+}
+
+
+

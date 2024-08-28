@@ -1,5 +1,4 @@
 #well merge the CNN with the rest of the layers here
-from tensorflow import keras
 from keras.models import Model
 from keras.layers import Dense, Conv2D, Input, MaxPool2D, Flatten
 

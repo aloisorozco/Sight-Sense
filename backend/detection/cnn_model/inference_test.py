@@ -1,11 +1,10 @@
 import tensorflow as tf
 from keras.models import Model
 import cv2 as cv
+import os
 
 MODEL_REPO = "backend/detection/cnn_model/scnn_custom"
-ANCHOR_IMG_PATH = "backend/detection/cnn_model/authed_people/92b9f61c-5eab-11ef-bbcf-e63bca865d36.png"
-
-anchor_img = tf.io.decode_jpeg(tf.io.read_file(ANCHOR_IMG_PATH), channels=3)
+DANIEL_AUTHED_PATH = "backend/detection/cnn_model/daniel_auth"
 
 scnn: Model = tf.keras.models.load_model(MODEL_REPO)
 
@@ -27,16 +26,25 @@ while True:
         print("snapshot")
         frame = cv.resize(frame, (105,105), interpolation=cv.INTER_AREA)
         frame_tensor = tf.convert_to_tensor(frame, dtype=tf.uint8)
-        
-        input_tensor = tf.concat([frame_tensor, anchor_img], axis=-1, name="inputs")
-        input_tensor = tf.reshape(input_tensor, (-1, 2, 105, 105, 3))
 
-        print(input_tensor.shape)
+        avg_score = 0
+        imgs_names = os.listdir(DANIEL_AUTHED_PATH)
+        img_count = len(imgs_names)
 
-        # cv.imwrite("backend/detection/cnn_model/img_test1.png",input_tensor[:,:, :1].numpy())
-        # cv.imwrite("backend/detection/cnn_model/img_test2.png",input_tensor[:,:, 1:].numpy())
+        for img in imgs_names:
+            img = tf.io.decode_jpeg(tf.io.read_file(f'{DANIEL_AUTHED_PATH}/{img}'), channels=3)
         
-        print(scnn.predict(input_tensor))
+            input_tensor = tf.concat([frame_tensor, img], axis=-1, name="inputs")
+            input_tensor = tf.reshape(input_tensor, (-1, 2, 105, 105, 3))
+
+            print(input_tensor.shape)
+
+            # cv.imwrite("backend/detection/cnn_model/img_test1.png",input_tensor[:,:, :1].numpy())
+            # cv.imwrite("backend/detection/cnn_model/img_test2.png",input_tensor[:,:, 1:].numpy())
+            avg_score += scnn.predict(input_tensor)[0][0]
+
+
+        print(avg_score / img_count)
         
 
 camera.release()

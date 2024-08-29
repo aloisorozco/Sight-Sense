@@ -34,6 +34,7 @@ class Siamese_CNN(Model):
     
 
     def call(self, inputs, **kwargs):
+        print(inputs)
         img1 = inputs[:, 0, :, :, :]
         img2 = inputs[:, 1, :, :, :]
 

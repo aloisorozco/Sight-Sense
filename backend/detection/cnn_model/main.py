@@ -5,7 +5,6 @@ from keras.metrics import BinaryAccuracy
 from siamese_cnn import Siamese_CNN
 import csv
 
-
 CSV_PATH = "backend/detection/cnn_model/dataset.csv"
 CSV_SMOL_PATH = "backend/detection/cnn_model/smol.csv"
 MODEL_REPO = "backend/detection/cnn_model/scnn_custom"
@@ -17,8 +16,8 @@ def decode_img(row):
     img1 = tf.io.read_file(row[0])
     img2 = tf.io.read_file(row[1])
 
-    decoded_img1 = tf.io.decode_jpeg(img1, channels=1)
-    decoded_img2 = tf.io.decode_jpeg(img2, channels=1)
+    decoded_img1 = tf.io.decode_jpeg(img1, channels=3)
+    decoded_img2 = tf.io.decode_jpeg(img2, channels=3)
     return decoded_img1, decoded_img2
 
 def configure_for_performance(dataset):
@@ -46,9 +45,8 @@ val_dataset = configure_for_performance(val_dataset)
 
 print("trining model")
 
-scnn = Siamese_CNN(105, 1)
+scnn = Siamese_CNN(105, 3)
 opt = Adam()
 scnn.compile(loss='binary_crossentropy', optimizer=opt, metrics=[BinaryAccuracy()])
 hist = scnn.fit(train_dataset, validation_data=val_dataset)
-print(hist)
 scnn.save(MODEL_REPO, save_format='tf')

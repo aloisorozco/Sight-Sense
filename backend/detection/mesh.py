@@ -3,7 +3,7 @@ import random
 import time
 import mediapipe.python.solutions.face_mesh as face_mesh
 import threading
-
+from detection.cv_capture import Capture
 class FaceMesh():
 
     # These are the IDs of the landmark coords that we need to compute the EAR - its an associative array so DO NOT CHANGE THE ORDER
@@ -19,7 +19,7 @@ class FaceMesh():
         
         self._timeout = None
 
-        self.capture_referance = capture_referance
+        self.capture_referance : Capture = capture_referance
 
         self.total_blinks = 0
         self.temporal_window  = 3

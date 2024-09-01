@@ -87,6 +87,9 @@ class Server():
             Server.sio.start_background_task(Server.lock_in_face, data)
             auth_res = await loop.run_in_executor(Server._executor, Server.await_auth_results)
 
+            # TODO: add subroutine here, to check if the user is an auther person - so just write a method, maybe in another class from Capture, to check if 
+            # the person is authed - model is wack, but thats ok, just integrate it for now.
+            
             if "super_secret_security_camera_broadcast" not in Server.sio.rooms(sid):
                 print(auth_res['code'])
                 await Server.sio.emit(auth_res['code'], auth_res['comment'])
